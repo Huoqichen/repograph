@@ -260,8 +260,4 @@ Contributions are welcome. Good next steps include:
 
 ## Star History
 
-<p>
-  <img src="./public/repomap.png" alt="repomap icon" width="40" />
-</p>
-
 [![Star History Chart](https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date)](https://star-history.com/#Huoqichen/repograph&Date)

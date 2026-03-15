@@ -16,9 +16,8 @@ export const metadata = {
   title: "repomap",
   description: "Turn any GitHub repository into an interactive architecture graph.",
   icons: {
-    icon: "/repomap.png",
-    shortcut: "/repomap.png",
-    apple: "/repomap.png"
+    icon: [{ url: "/repomap.svg", type: "image/svg+xml" }],
+    shortcut: "/repomap.svg"
   }
 };
 
