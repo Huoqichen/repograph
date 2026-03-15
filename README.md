@@ -120,6 +120,13 @@ npm install
 npm run dev
 ```
 
+Backend API only:
+
+```bash
+cp .env.api.example .env
+uvicorn repomap_api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
 ## Usage
 
 Analyze a public repository:
@@ -163,6 +170,20 @@ Options:
   --mermaid-out   Optional file path for the Mermaid diagram
   --keep-clone    Keep the cloned repository when using a temporary directory
   --help          Show help
+```
+
+Web UI:
+
+```text
+Backend:
+  uvicorn repomap_api.main:app --reload --port 8000
+
+Frontend:
+  cd web
+  npm run dev
+
+Open:
+  http://localhost:3000
 ```
 
 ## Example output
@@ -260,6 +281,113 @@ Interactive web UI:
 |  Sidebar: layers, selected module, folder tree, Mermaid   |
 +-----------------------------------------------------------+
 ```
+
+## Deployment
+
+`repomap` is designed to deploy cleanly as two services:
+
+- frontend: Next.js on Vercel
+- backend: Python API on any container host such as Railway, Render, Fly.io, or your own VM
+
+This split is the most production-friendly setup today because the frontend benefits from Vercel's Next.js hosting, while the backend needs `git` and enough runtime to clone and analyze repositories.
+
+### Vercel deployment
+
+Frontend deployment files are included in:
+
+- [web/vercel.json](web/vercel.json)
+- [web/.env.example](web/.env.example)
+
+Recommended setup:
+
+1. Import this GitHub repository into Vercel.
+2. Set the project Root Directory to `web`.
+3. Confirm the framework is `Next.js`.
+4. Set the environment variable `NEXT_PUBLIC_REPOMAP_API_URL` to your deployed backend API URL.
+5. Deploy.
+
+Example production environment variable:
+
+```text
+NEXT_PUBLIC_REPOMAP_API_URL=https://api-repomap.yourdomain.com
+```
+
+If you want the public demo domain to be `repomap.vercel.app`, attach that Vercel project to the `web/` directory and point it at your backend API URL.
+
+### Docker
+
+Container files are included in:
+
+- [Dockerfile.api](Dockerfile.api)
+- [docker-compose.yml](docker-compose.yml)
+- [web/Dockerfile](web/Dockerfile)
+- [.env.api.example](.env.api.example)
+
+Run both services locally with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- frontend at `http://localhost:3000`
+- backend API at `http://localhost:8000`
+
+Build only the backend image:
+
+```bash
+docker build -f Dockerfile.api -t repomap-api .
+docker run --rm -p 8000:8000 --env-file .env repomap-api
+```
+
+Build only the frontend image:
+
+```bash
+docker build -f web/Dockerfile -t repomap-web ./web
+docker run --rm -p 3000:3000 -e NEXT_PUBLIC_REPOMAP_API_URL=http://localhost:8000 repomap-web
+```
+
+### Production deployment for an online demo
+
+For a production demo such as `repomap.vercel.app`, use this architecture:
+
+```mermaid
+flowchart LR
+    USER["Browser"] --> WEB["repomap.vercel.app (Next.js on Vercel)"]
+    WEB --> API["repomap API (Docker host)"]
+    API --> GIT["github.com"]
+```
+
+Production checklist:
+
+1. Deploy the backend API first.
+2. Ensure the backend host has `git` installed.
+3. Set `REPOMAP_CORS_ORIGINS` to your frontend domain.
+4. Deploy the frontend on Vercel with `Root Directory = web`.
+5. Set `NEXT_PUBLIC_REPOMAP_API_URL` in Vercel to the backend URL.
+6. Add your final custom domain if needed.
+
+Example backend environment:
+
+```text
+REPOMAP_CORS_ORIGINS=https://repomap.vercel.app
+REPOMAP_CLONE_DIR=
+```
+
+Example production URLs:
+
+```text
+Frontend: https://repomap.vercel.app
+Backend:  https://repomap-api.fly.dev
+```
+
+Operational notes:
+
+- the backend performs live repository cloning, so outbound network access must be enabled
+- large repositories will take longer to analyze and may need longer request timeouts
+- if you expect heavy usage, add caching and background job handling in front of `/api/analyze`
+- if you deploy the backend behind a proxy, forward standard `X-Forwarded-*` headers
 
 ## Architecture
 
