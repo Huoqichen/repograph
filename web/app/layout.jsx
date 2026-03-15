@@ -14,7 +14,12 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata = {
   title: "repomap",
-  description: "Turn any GitHub repository into an interactive architecture graph."
+  description: "Turn any GitHub repository into an interactive architecture graph.",
+  icons: {
+    icon: "/repomap.png",
+    shortcut: "/repomap.png",
+    apple: "/repomap.png"
+  }
 };
 
 export default function RootLayout({ children }) {
