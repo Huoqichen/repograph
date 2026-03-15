@@ -243,10 +243,20 @@ docker compose up --build
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=Huoqichen%2Frepograph&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&legend=top-left" />
-  </picture>
-</a>
+<p align="center">
+  <a href="https://github.com/Huoqichen">
+    <img src="https://github.com/Huoqichen.png?size=120" alt="Huoqichen avatar" width="60" height="60" />
+  </a>
+</p>
+
+<p align="center"><strong>Huoqichen / repograph</strong></p>
+
+<p align="center">
+  <a href="https://www.star-history.com/?repos=Huoqichen%2Frepograph&type=date&legend=top-left">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date" />
+    </picture>
+  </a>
+</p>
