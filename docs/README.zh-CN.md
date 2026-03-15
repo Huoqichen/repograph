@@ -243,13 +243,8 @@ docker compose up --build
 
 ## Star History
 
-<p align="center">
-  <img src="../public/repomap.png" alt="repomap icon" width="28" />
-  <strong>Star History</strong>
+<p>
+  <img src="../public/repomap.png" alt="repomap icon" width="40" />
 </p>
 
-<p align="center">
-  <a href="https://star-history.com/#Huoqichen/repograph&Date">
-    <img src="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date" alt="Star History Chart" />
-  </a>
-</p>
+[![Star History Chart](https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date)](https://star-history.com/#Huoqichen/repograph&Date)
