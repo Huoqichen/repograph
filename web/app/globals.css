@@ -171,18 +171,13 @@ select {
 
 .results-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(340px, 0.82fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr);
   gap: 20px;
 }
 
 .graph-panel {
   overflow: hidden;
-  min-height: 860px;
-}
-
-.mermaid-main-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 760px;
 }
 
 .graph-header,
@@ -232,12 +227,6 @@ select {
     linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.04));
 }
 
-.graph-mini-frame .graph-canvas {
-  height: 320px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-}
-
 .graph-toolbar {
   display: flex;
   justify-content: space-between;
@@ -259,12 +248,6 @@ select {
   margin-top: 14px;
 }
 
-.mermaid-stack {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
-}
-
 .mermaid-preview,
 .mermaid-fallback {
   overflow: auto;
@@ -275,19 +258,21 @@ select {
   padding: 18px;
 }
 
-.mermaid-main-frame {
-  min-height: 680px;
-  padding: 0 20px 20px;
-}
-
-.mermaid-main-frame .mermaid-preview,
-.mermaid-main-frame .mermaid-fallback {
-  min-height: 680px;
-  height: 100%;
-}
-
-.graph-mini-frame {
+.mermaid-inline-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+  gap: 14px;
   margin-top: 14px;
+}
+
+.mermaid-inline-preview {
+  min-width: 0;
+}
+
+.mermaid-inline-preview .mermaid-preview,
+.mermaid-inline-preview .mermaid-fallback {
+  min-height: 340px;
+  height: 100%;
 }
 
 .mermaid-preview svg {
@@ -308,6 +293,7 @@ select {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.8);
   overflow: hidden;
+  min-width: 0;
 }
 
 .mermaid-source summary {
@@ -434,15 +420,12 @@ select {
     height: 500px;
   }
 
-  .mermaid-main-frame {
-    min-height: 420px;
-    padding: 0 16px 16px;
+  .mermaid-inline-layout {
+    grid-template-columns: 1fr;
   }
 
-  .mermaid-main-frame .mermaid-preview,
-  .mermaid-main-frame .mermaid-fallback,
-  .graph-mini-frame .graph-canvas {
-    min-height: 420px;
-    height: 420px;
+  .mermaid-inline-preview .mermaid-preview,
+  .mermaid-inline-preview .mermaid-fallback {
+    min-height: 260px;
   }
 }
