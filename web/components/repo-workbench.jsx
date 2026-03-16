@@ -16,6 +16,11 @@ const copy = {
     submit: "开始分析",
     loading: "分析中",
     graphTitle: "Graph",
+    filterTitle: "筛选",
+    searchPlaceholder: "搜索模块 / 路径",
+    allLayers: "全部层级",
+    allLanguages: "全部语言",
+    visible: "显示",
     primary: "语言",
     nodes: "节点",
     edges: "连线",
@@ -48,6 +53,11 @@ const copy = {
     submit: "Analyze",
     loading: "Analyzing",
     graphTitle: "Graph",
+    filterTitle: "Filters",
+    searchPlaceholder: "Search modules / paths",
+    allLayers: "All layers",
+    allLanguages: "All languages",
+    visible: "Visible",
     primary: "Language",
     nodes: "Nodes",
     edges: "Edges",
@@ -80,6 +90,9 @@ export function RepoWorkbench() {
   const [defaultBranch, setDefaultBranch] = useState("");
   const [result, setResult] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [layerFilter, setLayerFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState("all");
   const [error, setError] = useState("");
   const [branchError, setBranchError] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -96,6 +109,41 @@ export function RepoWorkbench() {
     () => modules.find((module) => module.id === selectedNode?.id) ?? null,
     [modules, selectedNode]
   );
+
+  const availableLayers = useMemo(() => layers.map((layer) => layer.name), [layers]);
+  const availableLanguages = useMemo(
+    () => Array.from(new Set(modules.map((module) => module.language))).sort(),
+    [modules]
+  );
+
+  const filteredNodes = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    return nodes.filter((node) => {
+      const matchesLayer = layerFilter === "all" || node.layer === layerFilter;
+      const matchesLanguage = languageFilter === "all" || node.language === languageFilter;
+      const matchesSearch =
+        !term ||
+        node.label.toLowerCase().includes(term) ||
+        node.path.toLowerCase().includes(term) ||
+        node.language.toLowerCase().includes(term);
+      return matchesLayer && matchesLanguage && matchesSearch;
+    });
+  }, [languageFilter, layerFilter, nodes, searchQuery]);
+
+  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map((node) => node.id)), [filteredNodes]);
+  const filteredEdges = useMemo(
+    () => edges.filter((edge) => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target)),
+    [edges, filteredNodeIds]
+  );
+  useEffect(() => {
+    if (!filteredNodes.length) {
+      setSelectedNode(null);
+      return;
+    }
+    if (!selectedNode || !filteredNodeIds.has(selectedNode.id)) {
+      setSelectedNode(filteredNodes[0]);
+    }
+  }, [filteredNodeIds, filteredNodes, selectedNode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -246,10 +294,18 @@ export function RepoWorkbench() {
                 <span className="stat-pill">
                   {t.layers}: {layers.length}
                 </span>
+                <span className="stat-pill">
+                  {t.visible}: {filteredNodes.length}
+                </span>
               </div>
             </header>
 
-            <GraphCanvas nodes={nodes} edges={edges} onSelect={setSelectedNode} selectedNodeId={selectedNode?.id} />
+            <GraphCanvas
+              nodes={filteredNodes}
+              edges={filteredEdges}
+              onSelect={setSelectedNode}
+              selectedNodeId={selectedNode?.id}
+            />
 
             <footer className="graph-toolbar">
               <span>{architecture.repository_url}</span>
@@ -258,6 +314,39 @@ export function RepoWorkbench() {
           </article>
 
           <aside className="sidebar">
+            <section className="panel side-section">
+              <h3>{t.filterTitle}</h3>
+              <div className="filter-grid">
+                <input
+                  className="filter-input"
+                  type="search"
+                  placeholder={t.searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+                <select className="filter-select" value={layerFilter} onChange={(event) => setLayerFilter(event.target.value)}>
+                  <option value="all">{t.allLayers}</option>
+                  {availableLayers.map((layerName) => (
+                    <option key={layerName} value={layerName}>
+                      {layerName}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="filter-select"
+                  value={languageFilter}
+                  onChange={(event) => setLanguageFilter(event.target.value)}
+                >
+                  <option value="all">{t.allLanguages}</option>
+                  {availableLanguages.map((languageName) => (
+                    <option key={languageName} value={languageName}>
+                      {languageName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </section>
+
             <section className="panel side-section">
               <h3>{t.detailsTitle}</h3>
               {selectedNode && selectedModule ? (
@@ -289,7 +378,7 @@ export function RepoWorkbench() {
             <section className="panel side-section">
               <h3>{t.listTitle}</h3>
               <div className="module-list">
-                {nodes.slice(0, 12).map((node) => (
+                {filteredNodes.slice(0, 16).map((node) => (
                   <div className="module-card" data-active={selectedNode?.id === node.id} key={node.id}>
                     <button type="button" onClick={() => setSelectedNode(node)}>
                       <h4>{node.label}</h4>

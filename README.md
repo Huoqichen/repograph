@@ -34,6 +34,9 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 - Export folder tree, JSON, and Mermaid output
 - Render Mermaid as both source and live diagram in the web UI
 - Render an interactive graph in the browser with D3.js
+- Support graph search and filtering by layer and language in the web UI
+- Resolve JavaScript/TypeScript monorepo workspaces and `tsconfig` / `jsconfig` path aliases
+- Cache repository analysis results on disk to speed up repeated requests
 - Proxy frontend requests through Next.js to avoid common local `Failed to fetch` issues
 - Support `allowedDevOrigins` for LAN-based Next.js development
 - Provide production-ready deployment files for Vercel and Docker
@@ -287,14 +290,32 @@ Full stack with Docker Compose:
 docker compose up --build
 ```
 
+## Current Status
+
+Implemented now:
+
+- broad language detection across source and script files
+- deep dependency analysis for major languages including Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby
+- stronger JavaScript/TypeScript monorepo resolution for workspaces and `tsconfig` aliases
+- web graph search and filtering
+- on-disk analysis caching for repeated repository scans
+
+Still good next upgrades:
+
+- background jobs and progress APIs for very large repositories
+- persistent queue workers for production deployments
+- deeper package-manager-aware monorepo resolution for pnpm, Turbo, Nx, Cargo workspaces, Maven multi-module, Gradle multi-project, and Bazel
+- graph grouping, collapsing, saved views, and layout presets
+- incremental re-analysis instead of full rescans
+
 ## Contributing
 
 Contributions are welcome. Good next steps include:
 
-- more language support
-- stronger monorepo dependency resolution
-- caching and background jobs for large repositories
-- graph filtering, search, and layout improvements
+- more language-specific parsers
+- package-manager-aware monorepo resolution
+- background jobs and async execution for large repositories
+- graph grouping, layout presets, and collaboration features
 
 ---
 

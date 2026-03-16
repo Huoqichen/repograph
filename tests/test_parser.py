@@ -201,6 +201,59 @@ def test_build_module_inventory_resolves_rust_and_c_family_dependencies(tmp_path
     assert dependency_map["src/main.cpp"]
 
 
+def test_build_module_inventory_resolves_workspace_packages_and_tsconfig_paths(tmp_path: Path) -> None:
+    package_json = tmp_path / "package.json"
+    package_json.write_text(
+        """
+        {
+          "workspaces": ["packages/*"]
+        }
+        """,
+        encoding="utf-8",
+    )
+    tsconfig_json = tmp_path / "tsconfig.json"
+    tsconfig_json.write_text(
+        """
+        {
+          "compilerOptions": {
+            "baseUrl": ".",
+            "paths": {
+              "@app/*": ["apps/web/src/*"]
+            }
+          }
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    workspace_pkg = tmp_path / "packages" / "ui"
+    workspace_pkg.mkdir(parents=True)
+    (workspace_pkg / "package.json").write_text(
+        """
+        {
+          "name": "@acme/ui",
+          "source": "src/index.ts"
+        }
+        """,
+        encoding="utf-8",
+    )
+    (workspace_pkg / "src").mkdir()
+    (workspace_pkg / "src" / "index.ts").write_text("export const Button = 1;\n", encoding="utf-8")
+
+    app_root = tmp_path / "apps" / "web" / "src"
+    app_root.mkdir(parents=True)
+    (app_root / "utils.ts").write_text("export const helper = true;\n", encoding="utf-8")
+    (app_root / "main.ts").write_text(
+        'import { Button } from "@acme/ui";\nimport { helper } from "@app/utils";\n',
+        encoding="utf-8",
+    )
+
+    modules, _languages, _primary_language = build_module_inventory(tmp_path)
+    dependency_map = {module.path: module.internal_dependencies for module in modules}
+
+    assert len(dependency_map["apps/web/src/main.ts"]) == 2
+
+
 def test_layer_detection_uses_path_and_dependencies() -> None:
     module = ModuleInfo(
         id="javascript:web/components/button",

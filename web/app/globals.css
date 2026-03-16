@@ -248,6 +248,31 @@ select {
   margin-top: 14px;
 }
 
+.filter-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--foreground);
+  padding: 0 14px;
+  outline: none;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  border-color: rgba(17, 17, 17, 0.2);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
 .mermaid-preview,
 .mermaid-fallback {
   overflow: auto;

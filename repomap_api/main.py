@@ -50,7 +50,13 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=400, detail="Only GitHub repository URLs are supported.")
 
     try:
-        return analyze_remote_repository(repo_url=repo_url, branch=payload.branch, clone_dir=settings.clone_dir)
+        return analyze_remote_repository(
+            repo_url=repo_url,
+            branch=payload.branch,
+            clone_dir=settings.clone_dir,
+            cache_dir=settings.cache_dir,
+            cache_ttl_seconds=settings.cache_ttl_seconds,
+        )
     except FileExistsError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except RuntimeError as error:

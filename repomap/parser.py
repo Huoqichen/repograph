@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -396,6 +397,7 @@ def _analyze_javascript_modules(
     script_files: list[Path],
     language_by_path: dict[Path, str | None],
 ) -> list[ModuleInfo]:
+    project_metadata = _build_javascript_project_metadata(root)
     alias_index: dict[str, str] = {}
     path_to_id: dict[Path, str] = {}
     display_by_path: dict[Path, str] = {}
@@ -423,7 +425,14 @@ def _analyze_javascript_modules(
         external_dependencies: set[str] = set()
 
         for import_name in raw_imports:
-            resolved = _resolve_javascript_internal_import(root, file_path, import_name, path_to_id, alias_index)
+            resolved = _resolve_javascript_internal_import(
+                root,
+                file_path,
+                import_name,
+                path_to_id,
+                alias_index,
+                project_metadata,
+            )
             if resolved and resolved != module_id:
                 internal_dependencies.add(resolved)
             elif not resolved:
@@ -883,6 +892,7 @@ def _resolve_javascript_internal_import(
     import_name: str,
     path_to_id: dict[Path, str],
     alias_index: dict[str, str],
+    project_metadata: dict[str, object],
 ) -> str | None:
     normalized_import = import_name.replace("\\", "/")
 
@@ -904,7 +914,18 @@ def _resolve_javascript_internal_import(
         return alias_index[alias_key]
 
     normalized_key = normalized_import.lstrip("./")
-    return alias_index.get(normalized_key)
+    if normalized_key in alias_index:
+        return alias_index[normalized_key]
+
+    for candidate_base in _resolve_javascript_monorepo_candidates(root, normalized_import, project_metadata):
+        resolved_path = _resolve_javascript_path(candidate_base)
+        if resolved_path and resolved_path in path_to_id:
+            return path_to_id[resolved_path]
+        alias_key = candidate_base.relative_to(root).as_posix() if candidate_base.is_relative_to(root) else None
+        if alias_key and alias_key in alias_index:
+            return alias_index[alias_key]
+
+    return None
 
 
 def _resolve_javascript_path(candidate_base: Path) -> Path | None:
@@ -937,6 +958,128 @@ def _normalize_javascript_dependency(import_name: str) -> str:
         parts = import_name.split("/")
         return "/".join(parts[:2]) if len(parts) >= 2 else import_name
     return import_name.split("/", 1)[0]
+
+
+def _build_javascript_project_metadata(root: Path) -> dict[str, object]:
+    package_dirs = _discover_workspace_package_dirs(root)
+    workspace_packages: dict[str, Path] = {}
+    for package_dir in package_dirs:
+        package_json = package_dir / "package.json"
+        if not package_json.exists():
+            continue
+        package_data = _read_json_file(package_json)
+        package_name = package_data.get("name")
+        if isinstance(package_name, str) and package_name.strip():
+            workspace_packages[package_name.strip()] = package_dir
+
+    tsconfig_data = _read_json_file(root / "tsconfig.json") or _read_json_file(root / "jsconfig.json")
+    compiler_options = tsconfig_data.get("compilerOptions", {}) if isinstance(tsconfig_data, dict) else {}
+    base_url_value = compiler_options.get("baseUrl") if isinstance(compiler_options, dict) else None
+    base_url = (root / base_url_value).resolve() if isinstance(base_url_value, str) and base_url_value else root
+    raw_paths = compiler_options.get("paths") if isinstance(compiler_options, dict) else {}
+    tsconfig_paths = raw_paths if isinstance(raw_paths, dict) else {}
+
+    return {
+        "workspace_packages": workspace_packages,
+        "tsconfig_base_url": base_url,
+        "tsconfig_paths": tsconfig_paths,
+    }
+
+
+def _discover_workspace_package_dirs(root: Path) -> list[Path]:
+    package_json = root / "package.json"
+    if not package_json.exists():
+        return []
+
+    package_data = _read_json_file(package_json)
+    workspaces = package_data.get("workspaces") if isinstance(package_data, dict) else None
+    patterns: list[str] = []
+    if isinstance(workspaces, list):
+        patterns = [item for item in workspaces if isinstance(item, str)]
+    elif isinstance(workspaces, dict):
+        packages = workspaces.get("packages")
+        if isinstance(packages, list):
+            patterns = [item for item in packages if isinstance(item, str)]
+
+    package_dirs: list[Path] = []
+    for pattern in patterns:
+        package_dirs.extend(path for path in root.glob(pattern) if path.is_dir())
+    return sorted(set(package_dirs))
+
+
+def _read_json_file(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _resolve_javascript_monorepo_candidates(
+    root: Path,
+    import_name: str,
+    project_metadata: dict[str, object],
+) -> list[Path]:
+    candidates: list[Path] = []
+
+    tsconfig_base_url = project_metadata.get("tsconfig_base_url")
+    tsconfig_paths = project_metadata.get("tsconfig_paths")
+    if isinstance(tsconfig_base_url, Path) and isinstance(tsconfig_paths, dict):
+        for alias_pattern, replacements in tsconfig_paths.items():
+            if not isinstance(alias_pattern, str) or not isinstance(replacements, list):
+                continue
+            wildcard_value = _match_alias_pattern(alias_pattern, import_name)
+            if wildcard_value is None:
+                continue
+            for replacement in replacements:
+                if not isinstance(replacement, str):
+                    continue
+                mapped = replacement.replace("*", wildcard_value)
+                candidates.append((tsconfig_base_url / mapped).resolve())
+
+    workspace_packages = project_metadata.get("workspace_packages")
+    if isinstance(workspace_packages, dict):
+        for package_name, package_dir in workspace_packages.items():
+            if not isinstance(package_name, str) or not isinstance(package_dir, Path):
+                continue
+            if import_name == package_name:
+                candidates.extend(_workspace_entry_candidates(package_dir))
+            elif import_name.startswith(f"{package_name}/"):
+                suffix = import_name[len(package_name) + 1 :]
+                candidates.append((package_dir / suffix).resolve())
+                candidates.append((package_dir / "src" / suffix).resolve())
+
+    return [candidate for candidate in candidates if candidate.is_relative_to(root) or candidate.exists()]
+
+
+def _match_alias_pattern(pattern: str, import_name: str) -> str | None:
+    if "*" not in pattern:
+        return "" if pattern == import_name else None
+    prefix, suffix = pattern.split("*", 1)
+    if not import_name.startswith(prefix):
+        return None
+    if suffix and not import_name.endswith(suffix):
+        return None
+    return import_name[len(prefix) : len(import_name) - len(suffix) if suffix else None]
+
+
+def _workspace_entry_candidates(package_dir: Path) -> list[Path]:
+    package_data = _read_json_file(package_dir / "package.json")
+    candidates: list[Path] = []
+    for field_name in ("source", "module", "main", "types", "typings"):
+        value = package_data.get(field_name)
+        if isinstance(value, str) and value:
+            candidates.append((package_dir / value).resolve())
+    candidates.extend(
+        [
+            (package_dir / "src" / "index").resolve(),
+            (package_dir / "index").resolve(),
+            package_dir.resolve(),
+        ]
+    )
+    return candidates
 
 
 def _go_import_path(module_path: str | None, relative_dir: Path) -> str | None:

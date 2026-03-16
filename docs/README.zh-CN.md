@@ -34,6 +34,9 @@
 - 输出目录树、JSON 和 Mermaid
 - Web 界面中的 Mermaid 支持可视化渲染与源码同时查看
 - 使用 D3.js 在浏览器中渲染交互式架构图
+- Web 端支持按层级、语言和关键词筛选图谱
+- 支持解析 JavaScript / TypeScript monorepo 的 workspace 与 `tsconfig` / `jsconfig` 路径别名
+- 支持磁盘缓存，重复分析同一仓库时更快
 - 通过 Next.js 同源代理减少本地开发时常见的 `Failed to fetch`
 - 支持 `allowedDevOrigins`，解决局域网访问 Next.js 开发服务时的警告
 - 提供可直接使用的 Vercel 与 Docker 部署配置
@@ -270,14 +273,32 @@ Docker Compose 启动完整栈：
 docker compose up --build
 ```
 
+## 当前状态
+
+已经实现：
+
+- 大量源码与脚本语言识别
+- Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby 的深度依赖分析
+- JavaScript / TypeScript monorepo 的 workspace 和 `tsconfig` 别名解析
+- Web 图谱搜索与筛选
+- 基于磁盘的分析缓存
+
+仍然值得继续增强：
+
+- 面向超大仓库的异步任务和进度接口
+- 面向生产环境的持久化任务队列
+- 更深入的 pnpm、Turbo、Nx、Cargo workspace、Maven、Gradle、Bazel 等 monorepo 解析
+- 图谱分组、折叠、保存视图和布局预设
+- 增量分析而不是每次全量重扫
+
 ## 贡献
 
 欢迎贡献。比较值得继续扩展的方向包括：
 
-- 增加更多语言支持
-- 更强的 monorepo 依赖解析
-- 面向大仓库的缓存和异步任务
-- 图过滤、搜索和布局优化
+- 增加更多语言专属解析器
+- 更强的包管理器 / monorepo 解析
+- 大仓库的异步任务与后台执行
+- 图谱分组、布局预设和协作能力
 
 ---
 
