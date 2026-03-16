@@ -18,12 +18,12 @@ def test_health_endpoint() -> None:
 
 def test_branches_endpoint(monkeypatch) -> None:
     def fake_list_remote_branches(repo_url: str) -> tuple[str | None, list[str]]:
-        assert repo_url == "https://github.com/Huoqichen/repograph"
+        assert repo_url == "https://github.com/Huoqichen/repomap"
         return "main", ["main", "dev"]
 
     monkeypatch.setattr("repomap_api.main.list_remote_branches", fake_list_remote_branches)
 
-    response = client.get("/api/branches", params={"repo_url": "https://github.com/Huoqichen/repograph"})
+    response = client.get("/api/branches", params={"repo_url": "https://github.com/Huoqichen/repomap"})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -108,3 +108,70 @@ def test_analyze_remote_repository_uses_cache(tmp_path: Path, monkeypatch) -> No
     assert isinstance(response_two, AnalyzeResponse)
     assert response_one.stats == GraphStats(nodes=0, edges=0, layers=0)
     assert calls["count"] == 1
+
+
+def test_async_analysis_job_endpoint(monkeypatch) -> None:
+    fake_result = AnalyzeResponse(
+        architecture_map={
+            "repository_url": "https://github.com/Huoqichen/repomap",
+            "root_path": "/tmp/repo",
+            "default_branch": "main",
+            "primary_language": "Python",
+            "detected_languages": [],
+            "architecture_layers": [],
+            "folder_tree": {"name": "repo", "type": "directory", "children": []},
+            "modules": [],
+            "graph": {"nodes": [], "edges": []},
+        },
+        mermaid="flowchart LR",
+        stats=GraphStats(nodes=0, edges=0, layers=0),
+    )
+
+    class FakeManager:
+        def submit(self, repo_url, branch, clone_dir, cache_dir, cache_ttl_seconds):
+            assert repo_url == "https://github.com/Huoqichen/repomap"
+            assert branch == "main"
+            return {
+                "id": "job-1",
+                "repo_url": repo_url,
+                "branch": branch,
+                "status": "queued",
+                "progress": 0,
+                "stage": "queued",
+                "cached": False,
+                "result": None,
+                "error": None,
+                "created_at": 1.0,
+                "updated_at": 1.0,
+            }
+
+        def get(self, job_id):
+            if job_id != "job-1":
+                return None
+            return {
+                "id": "job-1",
+                "repo_url": "https://github.com/Huoqichen/repomap",
+                "branch": "main",
+                "status": "completed",
+                "progress": 100,
+                "stage": "completed",
+                "cached": True,
+                "result": fake_result.model_dump(),
+                "error": None,
+                "created_at": 1.0,
+                "updated_at": 2.0,
+            }
+
+    monkeypatch.setattr("repomap_api.main.job_manager", FakeManager())
+
+    submit_response = client.post(
+        "/api/analyze/jobs",
+        json={"repo_url": "https://github.com/Huoqichen/repomap", "branch": "main"},
+    )
+    job_response = client.get("/api/analyze/jobs/job-1")
+
+    assert submit_response.status_code == 202
+    assert submit_response.json()["status"] == "queued"
+    assert job_response.status_code == 200
+    assert job_response.json()["status"] == "completed"
+    assert job_response.json()["cached"] is True

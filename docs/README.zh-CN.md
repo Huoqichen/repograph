@@ -27,7 +27,7 @@
 
 - 同时支持命令行和 Web 界面分析 GitHub 仓库
 - 支持在整个仓库范围内识别大量源码与脚本语言
-- 对 Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby 进行深度依赖分析
+- 对 Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、Scala、Groovy、C#、PHP、Swift、C/C++、Objective-C、Ruby、Dart、Lua、Perl、Shell 进行深度依赖分析
 - 使用 `networkx` 构建依赖关系图
 - 自动推断顶层架构层：
   `Frontend`、`Backend`、`Database`、`Infrastructure`、`Shared`
@@ -35,8 +35,10 @@
 - Web 界面中的 Mermaid 支持可视化渲染与源码同时查看
 - 使用 D3.js 在浏览器中渲染交互式架构图
 - Web 端支持按层级、语言和关键词筛选图谱
-- 支持解析 JavaScript / TypeScript monorepo 的 workspace 与 `tsconfig` / `jsconfig` 路径别名
+- Web 端支持力导向、分层、环形三种图布局
+- 支持解析 JavaScript / TypeScript monorepo 的 `package.json`、`pnpm-workspace.yaml`、`lerna.json` workspace 与 `tsconfig` / `jsconfig` 路径别名
 - 支持磁盘缓存，重复分析同一仓库时更快
+- 面向大仓库提供异步分析任务与进度轮询接口
 - 通过 Next.js 同源代理减少本地开发时常见的 `Failed to fetch`
 - 支持 `allowedDevOrigins`，解决局域网访问 Next.js 开发服务时的警告
 - 提供可直接使用的 Vercel 与 Docker 部署配置
@@ -48,7 +50,7 @@
 - 仓库级语言识别：
   Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、Scala、Groovy、C、C++、C#、Swift、Objective-C、PHP、Ruby、Perl、Lua、R、Julia、Dart、Shell、PowerShell、Batch、Tcl、Elixir、Erlang、Haskell、OCaml、F#、Nim、Zig、Crystal、Elm、Clojure、Common Lisp、Scheme、Racket、Fortran、COBOL、Ada、Pascal、Visual Basic、D、Solidity、Move、V、Verilog、VHDL、Assembly、SQL、GraphQL、CSS、HTML、XML、Vue、Svelte、Astro、Nix、Starlark、Terraform、HCL、Bicep、Jsonnet、Cue、Rego、Puppet、Raku、Apex、Haxe、ReasonML、Standard ML、Awk、AppleScript、Dockerfile、Makefile、CMake。
 - 深度依赖分析：
-  Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby。
+  Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、Scala、Groovy、C#、PHP、Swift、C/C++、Objective-C、Ruby、Dart、Lua、Perl、Shell。
 - 其它已识别语言：
   即使没有深度 import 解析，也会进入语言统计、模块清单、架构图和目录树结果。
 
@@ -162,6 +164,13 @@ repomap https://github.com/user/repo
 ```env
 REPOMAP_API_URL=http://127.0.0.1:8000
 ALLOWED_DEV_ORIGINS=localhost,127.0.0.1,192.168.164.1
+```
+
+异步接口示例：
+
+```text
+POST /api/analyze/jobs
+GET  /api/analyze/jobs/{job_id}
 ```
 
 ## 输出示例
@@ -278,17 +287,17 @@ docker compose up --build
 已经实现：
 
 - 大量源码与脚本语言识别
-- Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby 的深度依赖分析
-- JavaScript / TypeScript monorepo 的 workspace 和 `tsconfig` 别名解析
-- Web 图谱搜索与筛选
+- Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、Scala、Groovy、C#、PHP、Swift、C/C++、Objective-C、Ruby、Dart、Lua、Perl、Shell 的深度依赖分析
+- JavaScript / TypeScript monorepo 的 `package.json`、`pnpm-workspace.yaml`、`lerna.json` workspace 和 `tsconfig` 别名解析
+- Web 图谱搜索、筛选和布局切换
 - 基于磁盘的分析缓存
+- 面向大仓库的异步分析任务与进度轮询
 
 仍然值得继续增强：
 
-- 面向超大仓库的异步任务和进度接口
 - 面向生产环境的持久化任务队列
-- 更深入的 pnpm、Turbo、Nx、Cargo workspace、Maven、Gradle、Bazel 等 monorepo 解析
-- 图谱分组、折叠、保存视图和布局预设
+- 更深入的 Turbo、Nx、Cargo workspace、Maven、Gradle、Bazel 等 monorepo 解析
+- 图谱分组、折叠、保存视图、边聚合和更多布局预设
 - 增量分析而不是每次全量重扫
 
 ## 贡献
@@ -297,7 +306,7 @@ docker compose up --build
 
 - 增加更多语言专属解析器
 - 更强的包管理器 / monorepo 解析
-- 大仓库的异步任务与后台执行
+- 大仓库的持久化任务队列与后台执行
 - 图谱分组、布局预设和协作能力
 
 ---

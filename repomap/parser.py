@@ -160,6 +160,8 @@ DEEP_ANALYSIS_LANGUAGES = {
     "Rust",
     "Java",
     "Kotlin",
+    "Scala",
+    "Groovy",
     "C#",
     "PHP",
     "Swift",
@@ -167,6 +169,10 @@ DEEP_ANALYSIS_LANGUAGES = {
     "C++",
     "Objective-C",
     "Ruby",
+    "Dart",
+    "Lua",
+    "Perl",
+    "Shell",
 }
 JS_TS_LANGUAGES = {"JavaScript", "TypeScript"}
 JVM_LANGUAGES = {"Java", "Kotlin"}
@@ -198,6 +204,8 @@ JAVA_PACKAGE_RE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.MULTILINE)
 JAVA_IMPORT_RE = re.compile(r"^\s*import\s+(?:static\s+)?([\w.*]+)\s*;", re.MULTILINE)
 KOTLIN_PACKAGE_RE = re.compile(r"^\s*package\s+([\w.]+)", re.MULTILINE)
 KOTLIN_IMPORT_RE = re.compile(r"^\s*import\s+([\w.*]+)", re.MULTILINE)
+SCALA_PACKAGE_RE = re.compile(r"^\s*package\s+([\w.]+)", re.MULTILINE)
+SCALA_IMPORT_RE = re.compile(r"^\s*import\s+([^\n;]+)", re.MULTILINE)
 C_SHARP_NAMESPACE_RE = re.compile(r"^\s*(?:file\s+)?namespace\s+([\w.]+)", re.MULTILINE)
 C_SHARP_USING_RE = re.compile(r"^\s*(?:global\s+)?using\s+(?:static\s+)?([\w.]+)\s*;", re.MULTILINE)
 PHP_NAMESPACE_RE = re.compile(r"^\s*namespace\s+([^;]+);", re.MULTILINE)
@@ -205,6 +213,12 @@ PHP_USE_RE = re.compile(r"^\s*use\s+([^;]+);", re.MULTILINE)
 PHP_FILE_IMPORT_RE = re.compile(r"""(?:require|require_once|include|include_once)\s*(?:\(\s*)?["']([^"']+)["']""")
 RUBY_REQUIRE_RE = re.compile(r"""^\s*require\s+["']([^"']+)["']""", re.MULTILINE)
 RUBY_REQUIRE_RELATIVE_RE = re.compile(r"""^\s*require_relative\s+["']([^"']+)["']""", re.MULTILINE)
+DART_PACKAGE_NAME_RE = re.compile(r"^\s*name\s*:\s*([A-Za-z0-9_]+)\s*$", re.MULTILINE)
+DART_IMPORT_RE = re.compile(r"""^\s*(?:import|export|part)\s+["']([^"']+)["']""", re.MULTILINE)
+LUA_REQUIRE_RE = re.compile(r"""require\s*(?:\(\s*)?["']([^"']+)["']\s*\)?""")
+PERL_USE_RE = re.compile(r"^\s*use\s+([A-Za-z_]\w*(?:::\w+)*)", re.MULTILINE)
+PERL_REQUIRE_RE = re.compile(r"""^\s*require\s+["']([^"']+)["']""", re.MULTILINE)
+SHELL_SOURCE_RE = re.compile(r"""^\s*(?:source|\.)\s+["']?([^\s"';&|]+)["']?""", re.MULTILINE)
 RUST_USE_RE = re.compile(r"^\s*use\s+(.+?);", re.MULTILINE)
 RUST_MOD_RE = re.compile(r"^\s*(?:pub\s+)?mod\s+([A-Za-z_]\w*)\s*;", re.MULTILINE)
 RUST_CRATE_NAME_RE = re.compile(r'^\s*name\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
@@ -257,9 +271,15 @@ def build_module_inventory(root: Path) -> tuple[list[ModuleInfo], list[LanguageS
     rust_files = [path for path, language in language_by_path.items() if language == "Rust"]
     java_files = [path for path, language in language_by_path.items() if language == "Java"]
     kotlin_files = [path for path, language in language_by_path.items() if language == "Kotlin"]
+    scala_files = [path for path, language in language_by_path.items() if language == "Scala"]
+    groovy_files = [path for path, language in language_by_path.items() if language == "Groovy"]
     csharp_files = [path for path, language in language_by_path.items() if language == "C#"]
     php_files = [path for path, language in language_by_path.items() if language == "PHP"]
     ruby_files = [path for path, language in language_by_path.items() if language == "Ruby"]
+    dart_files = [path for path, language in language_by_path.items() if language == "Dart"]
+    lua_files = [path for path, language in language_by_path.items() if language == "Lua"]
+    perl_files = [path for path, language in language_by_path.items() if language == "Perl"]
+    shell_files = [path for path, language in language_by_path.items() if language == "Shell"]
     swift_files = [path for path, language in language_by_path.items() if language == "Swift"]
     c_family_files = [path for path, language in language_by_path.items() if language in C_FAMILY_LANGUAGES]
 
@@ -269,9 +289,15 @@ def build_module_inventory(root: Path) -> tuple[list[ModuleInfo], list[LanguageS
     modules.extend(_analyze_rust_modules(root, rust_files))
     modules.extend(_analyze_jvm_modules(root, java_files, "Java"))
     modules.extend(_analyze_jvm_modules(root, kotlin_files, "Kotlin"))
+    modules.extend(_analyze_jvm_modules(root, scala_files, "Scala"))
+    modules.extend(_analyze_jvm_modules(root, groovy_files, "Groovy"))
     modules.extend(_analyze_csharp_modules(root, csharp_files))
     modules.extend(_analyze_php_modules(root, php_files))
     modules.extend(_analyze_ruby_modules(root, ruby_files))
+    modules.extend(_analyze_dart_modules(root, dart_files))
+    modules.extend(_analyze_lua_modules(root, lua_files))
+    modules.extend(_analyze_perl_modules(root, perl_files))
+    modules.extend(_analyze_shell_modules(root, shell_files))
     modules.extend(_analyze_swift_modules(root, swift_files))
     modules.extend(_analyze_c_family_modules(root, c_family_files, language_by_path))
 
@@ -281,9 +307,15 @@ def build_module_inventory(root: Path) -> tuple[list[ModuleInfo], list[LanguageS
     analyzed_files.update(rust_files)
     analyzed_files.update(java_files)
     analyzed_files.update(kotlin_files)
+    analyzed_files.update(scala_files)
+    analyzed_files.update(groovy_files)
     analyzed_files.update(csharp_files)
     analyzed_files.update(php_files)
     analyzed_files.update(ruby_files)
+    analyzed_files.update(dart_files)
+    analyzed_files.update(lua_files)
+    analyzed_files.update(perl_files)
+    analyzed_files.update(shell_files)
     analyzed_files.update(swift_files)
     analyzed_files.update(c_family_files)
 
@@ -720,6 +752,199 @@ def _analyze_ruby_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
     return modules
 
 
+def _analyze_dart_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    if not files:
+        return []
+
+    package_name = _read_dart_package_name(root)
+    alias_index: dict[str, str] = {}
+    metadata: dict[Path, list[str]] = {}
+
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = f"dart:{relative_stem}"
+        alias_index[relative_stem] = module_id
+        alias_index[file_path.relative_to(root).as_posix()] = module_id
+        metadata[file_path] = sorted(_parse_dart_imports(file_path))
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = alias_index[relative_stem]
+        raw_imports = metadata[file_path]
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in raw_imports:
+            resolved = _resolve_dart_internal_import(root, file_path, import_name, alias_index, package_name)
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(_normalize_dart_dependency(import_name))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=relative_stem,
+                path=file_path.relative_to(root).as_posix(),
+                language="Dart",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_lua_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    if not files:
+        return []
+
+    module_name_to_id: dict[str, str] = {}
+    metadata: dict[Path, list[str]] = {}
+    for file_path in sorted(files):
+        module_name = _lua_module_name(root, file_path)
+        module_name_to_id[module_name] = f"lua:{file_path.relative_to(root).with_suffix('').as_posix()}"
+        metadata[file_path] = sorted(_parse_lua_imports(file_path))
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_name = _lua_module_name(root, file_path)
+        module_id = module_name_to_id[module_name]
+        raw_imports = metadata[file_path]
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in raw_imports:
+            resolved = _resolve_lua_internal_import(import_name, module_name_to_id)
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(_normalize_path_dependency(import_name.replace(".", "/")))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language="Lua",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_perl_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    if not files:
+        return []
+
+    metadata: dict[Path, tuple[list[str], list[str]]] = {}
+    namespace_to_id: dict[str, str] = {}
+    path_alias_index: dict[str, str] = {}
+    normalized_namespace_to_id: dict[str, str] = {}
+
+    for file_path in sorted(files):
+        module_name = _perl_module_name(root, file_path)
+        module_id = f"perl:{file_path.relative_to(root).with_suffix('').as_posix()}"
+        namespace_to_id[module_name] = module_id
+        normalized_namespace_to_id[module_name.replace("::", ".")] = module_id
+        path_alias_index[file_path.relative_to(root).with_suffix('').as_posix()] = module_id
+        path_alias_index[file_path.relative_to(root).as_posix()] = module_id
+        metadata[file_path] = _parse_perl_imports(file_path)
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_name = _perl_module_name(root, file_path)
+        module_id = namespace_to_id[module_name]
+        namespace_imports, file_imports = metadata[file_path]
+        raw_imports = sorted(set(namespace_imports + file_imports))
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in namespace_imports:
+            resolved = _resolve_dotted_internal_import(import_name.replace("::", "."), normalized_namespace_to_id)
+            if resolved:
+                internal_dependencies.update(dep for dep in resolved if dep != module_id)
+            else:
+                external_dependencies.add(_normalize_perl_dependency(import_name))
+
+        for import_name in file_imports:
+            resolved = _resolve_path_like_import(root, file_path, import_name, path_alias_index, (".pm", ".pl", ".t"))
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(import_name)
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language="Perl",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_shell_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    if not files:
+        return []
+
+    alias_index: dict[str, str] = {}
+    metadata: dict[Path, list[str]] = {}
+
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = f"shell:{relative_stem}"
+        alias_index[relative_stem] = module_id
+        alias_index[file_path.relative_to(root).as_posix()] = module_id
+        alias_index[file_path.name] = module_id
+        metadata[file_path] = sorted(_parse_shell_imports(file_path))
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = alias_index[relative_stem]
+        raw_imports = metadata[file_path]
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in raw_imports:
+            resolved = _resolve_path_like_import(
+                root,
+                file_path,
+                import_name,
+                alias_index,
+                ("", ".sh", ".bash", ".zsh", ".ksh", ".fish"),
+            )
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(_normalize_path_dependency(import_name))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=relative_stem,
+                path=file_path.relative_to(root).as_posix(),
+                language="Shell",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
 def _analyze_swift_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
     target_to_files: dict[str, list[Path]] = defaultdict(list)
     for file_path in files:
@@ -987,24 +1212,64 @@ def _build_javascript_project_metadata(root: Path) -> dict[str, object]:
 
 
 def _discover_workspace_package_dirs(root: Path) -> list[Path]:
-    package_json = root / "package.json"
-    if not package_json.exists():
+    patterns = _discover_workspace_patterns(root)
+    if not patterns:
         return []
-
-    package_data = _read_json_file(package_json)
-    workspaces = package_data.get("workspaces") if isinstance(package_data, dict) else None
-    patterns: list[str] = []
-    if isinstance(workspaces, list):
-        patterns = [item for item in workspaces if isinstance(item, str)]
-    elif isinstance(workspaces, dict):
-        packages = workspaces.get("packages")
-        if isinstance(packages, list):
-            patterns = [item for item in packages if isinstance(item, str)]
 
     package_dirs: list[Path] = []
     for pattern in patterns:
         package_dirs.extend(path for path in root.glob(pattern) if path.is_dir())
     return sorted(set(package_dirs))
+
+
+def _discover_workspace_patterns(root: Path) -> list[str]:
+    patterns: list[str] = []
+
+    package_json = root / "package.json"
+    if package_json.exists():
+        package_data = _read_json_file(package_json)
+        workspaces = package_data.get("workspaces") if isinstance(package_data, dict) else None
+        if isinstance(workspaces, list):
+            patterns.extend(item for item in workspaces if isinstance(item, str))
+        elif isinstance(workspaces, dict):
+            packages = workspaces.get("packages")
+            if isinstance(packages, list):
+                patterns.extend(item for item in packages if isinstance(item, str))
+
+    patterns.extend(_read_pnpm_workspace_patterns(root / "pnpm-workspace.yaml"))
+    patterns.extend(_read_lerna_workspace_patterns(root / "lerna.json"))
+    return sorted(set(patterns))
+
+
+def _read_pnpm_workspace_patterns(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+
+    patterns: list[str] = []
+    in_packages_block = False
+    for raw_line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped == "packages:":
+            in_packages_block = True
+            continue
+        if in_packages_block and stripped.startswith("-"):
+            candidate = stripped[1:].strip().strip("'\"")
+            if candidate:
+                patterns.append(candidate)
+            continue
+        if in_packages_block and not raw_line.startswith((" ", "\t")):
+            break
+    return patterns
+
+
+def _read_lerna_workspace_patterns(path: Path) -> list[str]:
+    lerna_data = _read_json_file(path)
+    packages = lerna_data.get("packages") if isinstance(lerna_data, dict) else None
+    if isinstance(packages, list):
+        return [item for item in packages if isinstance(item, str)]
+    return []
 
 
 def _read_json_file(path: Path) -> dict:
@@ -1198,11 +1463,44 @@ def _parse_jvm_metadata(file_path: Path, language_name: str) -> tuple[str | None
         package_match = JAVA_PACKAGE_RE.search(source)
         package_name = package_match.group(1) if package_match else None
         imports = JAVA_IMPORT_RE.findall(source)
-    else:
+    elif language_name == "Kotlin":
         package_match = KOTLIN_PACKAGE_RE.search(source)
         package_name = package_match.group(1) if package_match else None
         imports = KOTLIN_IMPORT_RE.findall(source)
+    elif language_name == "Scala":
+        package_match = SCALA_PACKAGE_RE.search(source)
+        package_name = package_match.group(1) if package_match else None
+        imports = []
+        for raw_import in SCALA_IMPORT_RE.findall(source):
+            imports.extend(_normalize_scala_imports(raw_import))
+    else:
+        package_match = JAVA_PACKAGE_RE.search(source)
+        package_name = package_match.group(1) if package_match else None
+        imports = JAVA_IMPORT_RE.findall(source)
     return package_name, sorted(set(imports))
+
+
+def _normalize_scala_imports(raw_import: str) -> list[str]:
+    normalized = raw_import.strip().replace("_root_.", "")
+    if not normalized:
+        return []
+    if "{" not in normalized:
+        candidate = normalized.split("=>", 1)[0].strip()
+        return [candidate.removesuffix("._")]
+
+    base, remainder = normalized.split("{", 1)
+    base = base.rstrip(". ").strip()
+    items = remainder.rstrip("}").split(",")
+    imports: list[str] = []
+    for item in items:
+        cleaned = item.strip()
+        if not cleaned or cleaned == "_":
+            if base:
+                imports.append(base)
+            continue
+        cleaned = cleaned.split("=>", 1)[0].strip()
+        imports.append(f"{base}.{cleaned}".strip("."))
+    return imports
 
 
 def _jvm_module_name(root: Path, file_path: Path, package_name: str | None) -> str:
@@ -1299,6 +1597,85 @@ def _parse_ruby_imports(file_path: Path) -> tuple[list[str], list[str]]:
         sorted(set(RUBY_REQUIRE_RE.findall(source))),
         sorted(set(RUBY_REQUIRE_RELATIVE_RE.findall(source))),
     )
+
+
+def _read_dart_package_name(root: Path) -> str | None:
+    pubspec = root / "pubspec.yaml"
+    if not pubspec.exists():
+        return None
+    match = DART_PACKAGE_NAME_RE.search(pubspec.read_text(encoding="utf-8", errors="ignore"))
+    return match.group(1) if match else None
+
+
+def _parse_dart_imports(file_path: Path) -> set[str]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return set(DART_IMPORT_RE.findall(source))
+
+
+def _resolve_dart_internal_import(
+    root: Path,
+    file_path: Path,
+    import_name: str,
+    alias_index: dict[str, str],
+    package_name: str | None,
+) -> str | None:
+    if import_name.startswith("."):
+        return _resolve_path_like_import(root, file_path, import_name, alias_index, (".dart",))
+
+    if package_name and import_name.startswith(f"package:{package_name}/"):
+        suffix = import_name[len(f"package:{package_name}/") :]
+        return _resolve_path_like_import(root, root / "lib" / "__anchor__.dart", f"./{suffix}", alias_index, (".dart",))
+
+    return None
+
+
+def _normalize_dart_dependency(import_name: str) -> str:
+    if import_name.startswith("package:"):
+        remainder = import_name[len("package:") :]
+        return remainder.split("/", 1)[0]
+    return import_name
+
+
+def _lua_module_name(root: Path, file_path: Path) -> str:
+    relative = file_path.relative_to(root).with_suffix("")
+    path_text = relative.as_posix().replace("/", ".")
+    return path_text[:-5] if path_text.endswith(".init") else path_text
+
+
+def _parse_lua_imports(file_path: Path) -> set[str]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return set(LUA_REQUIRE_RE.findall(source))
+
+
+def _resolve_lua_internal_import(import_name: str, module_name_to_id: dict[str, str]) -> str | None:
+    if import_name in module_name_to_id:
+        return module_name_to_id[import_name]
+    init_candidate = f"{import_name}.init"
+    return module_name_to_id.get(init_candidate)
+
+
+def _perl_module_name(root: Path, file_path: Path) -> str:
+    relative = file_path.relative_to(root).with_suffix("")
+    if relative.parts and relative.parts[0] == "lib":
+        relative = Path(*relative.parts[1:]) if len(relative.parts) > 1 else Path(relative.name)
+    return "::".join(relative.parts) if relative.parts else file_path.stem
+
+
+def _parse_perl_imports(file_path: Path) -> tuple[list[str], list[str]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return (
+        sorted(set(PERL_USE_RE.findall(source))),
+        sorted(set(PERL_REQUIRE_RE.findall(source))),
+    )
+
+
+def _normalize_perl_dependency(import_name: str) -> str:
+    return import_name.split("::", 1)[0]
+
+
+def _parse_shell_imports(file_path: Path) -> set[str]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return set(SHELL_SOURCE_RE.findall(source))
 
 
 def _swift_target_name(root: Path, file_path: Path) -> str:

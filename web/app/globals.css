@@ -169,6 +169,10 @@ select {
   font-size: 0.95rem;
 }
 
+.status-line-neutral {
+  color: var(--muted);
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr);

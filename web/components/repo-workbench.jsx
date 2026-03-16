@@ -17,6 +17,10 @@ const copy = {
     loading: "分析中",
     graphTitle: "Graph",
     filterTitle: "筛选",
+    layoutTitle: "布局",
+    layoutForce: "力导向",
+    layoutLayered: "分层",
+    layoutRadial: "环形",
     searchPlaceholder: "搜索模块 / 路径",
     allLayers: "全部层级",
     allLanguages: "全部语言",
@@ -41,7 +45,15 @@ const copy = {
     invalidRepo: "请输入有效的 GitHub 仓库地址。",
     backendUnreachable: "后端 API 无法访问，请先启动 Python API。",
     analyzeFailed: "仓库分析失败。",
-    branchFailed: "分支读取失败。"
+    branchFailed: "分支读取失败。",
+    jobQueued: "任务已排队",
+    jobCloning: "正在克隆",
+    jobAnalyzingStage: "正在解析",
+    jobGraph: "正在构图",
+    jobCaching: "正在缓存",
+    jobRunning: "正在分析",
+    jobCached: "命中缓存",
+    jobCompleted: "分析完成"
   },
   en: {
     brand: "repomap",
@@ -54,6 +66,10 @@ const copy = {
     loading: "Analyzing",
     graphTitle: "Graph",
     filterTitle: "Filters",
+    layoutTitle: "Layout",
+    layoutForce: "Force",
+    layoutLayered: "Layered",
+    layoutRadial: "Radial",
     searchPlaceholder: "Search modules / paths",
     allLayers: "All layers",
     allLanguages: "All languages",
@@ -78,7 +94,15 @@ const copy = {
     invalidRepo: "Please enter a valid GitHub repository URL.",
     backendUnreachable: "Backend API is unreachable. Start the Python API first.",
     analyzeFailed: "Repository analysis failed.",
-    branchFailed: "Failed to load branches."
+    branchFailed: "Failed to load branches.",
+    jobQueued: "Queued",
+    jobCloning: "Cloning",
+    jobAnalyzingStage: "Analyzing",
+    jobGraph: "Building graph",
+    jobCaching: "Caching",
+    jobRunning: "Analyzing",
+    jobCached: "Cache hit",
+    jobCompleted: "Completed"
   }
 };
 
@@ -93,6 +117,8 @@ export function RepoWorkbench() {
   const [searchQuery, setSearchQuery] = useState("");
   const [layerFilter, setLayerFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
+  const [layoutMode, setLayoutMode] = useState("force");
+  const [jobStatus, setJobStatus] = useState(null);
   const [error, setError] = useState("");
   const [branchError, setBranchError] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -188,12 +214,20 @@ export function RepoWorkbench() {
   async function handleAnalyze(nextRepoUrl = repoUrl, nextBranch = branch) {
     setIsPending(true);
     setError("");
+    setJobStatus(null);
 
     try {
-      const response = await fetchArchitecture(nextRepoUrl.trim(), nextBranch || undefined);
+      const response = await fetchArchitecture(nextRepoUrl.trim(), nextBranch || undefined, (job) => {
+        setJobStatus(job);
+      });
       startTransition(() => {
         setResult(response);
         setSelectedNode(response.architecture_map.graph.nodes[0] ?? null);
+        setJobStatus((currentJob) =>
+          currentJob
+            ? { ...currentJob, status: "completed", progress: 100, stage: "completed" }
+            : currentJob
+        );
       });
     } catch (requestError) {
       setError(localizeError(requestError, locale));
@@ -274,6 +308,9 @@ export function RepoWorkbench() {
         </form>
 
         {error || branchError ? <p className="status-line">{error || branchError}</p> : null}
+        {!error && !branchError && isPending && jobStatus ? (
+          <p className="status-line status-line-neutral">{formatJobStatus(jobStatus, locale)}</p>
+        ) : null}
       </section>
 
       {architecture ? (
@@ -305,6 +342,7 @@ export function RepoWorkbench() {
               edges={filteredEdges}
               onSelect={setSelectedNode}
               selectedNodeId={selectedNode?.id}
+              layoutMode={layoutMode}
             />
 
             <footer className="graph-toolbar">
@@ -343,6 +381,17 @@ export function RepoWorkbench() {
                       {languageName}
                     </option>
                   ))}
+                </select>
+                <select className="filter-select" value={layoutMode} onChange={(event) => setLayoutMode(event.target.value)}>
+                  <option value="force">
+                    {t.layoutTitle}: {t.layoutForce}
+                  </option>
+                  <option value="layered">
+                    {t.layoutTitle}: {t.layoutLayered}
+                  </option>
+                  <option value="radial">
+                    {t.layoutTitle}: {t.layoutRadial}
+                  </option>
                 </select>
               </div>
             </section>
@@ -458,4 +507,22 @@ function localizeBranchError(error, locale) {
     return copy[locale].backendUnreachable;
   }
   return message || copy[locale].branchFailed;
+}
+
+function formatJobStatus(job, locale) {
+  const t = copy[locale];
+  const labels = {
+    queued: t.jobQueued,
+    cloning: t.jobCloning,
+    analyzing: t.jobAnalyzingStage,
+    building_graph: t.jobGraph,
+    caching: t.jobCaching,
+    running: t.jobRunning,
+    cache_hit: t.jobCached,
+    completed: t.jobCompleted
+  };
+
+  const stageLabel = labels[job.stage] || labels[job.status] || job.stage || job.status;
+  const suffix = typeof job.progress === "number" ? ` · ${job.progress}%` : "";
+  return `${stageLabel}${job.cached ? ` · ${t.jobCached}` : ""}${suffix}`;
 }

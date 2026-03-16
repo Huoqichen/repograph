@@ -25,3 +25,17 @@ class AnalyzeResponse(BaseModel):
     architecture_map: dict
     mermaid: str
     stats: GraphStats
+
+
+class AnalyzeJobResponse(BaseModel):
+    id: str
+    repo_url: HttpUrl
+    branch: str | None = None
+    status: str
+    progress: int = 0
+    stage: str | None = None
+    cached: bool = False
+    result: AnalyzeResponse | None = None
+    error: str | None = None
+    created_at: float
+    updated_at: float

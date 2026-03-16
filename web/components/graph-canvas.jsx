@@ -11,7 +11,9 @@ const layerColors = {
   Shared: "#d1d5db"
 };
 
-export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId }) {
+const preferredLayerOrder = ["Frontend", "Backend", "Shared", "Database", "Infrastructure"];
+
+export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId, layoutMode = "force" }) {
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -29,21 +31,34 @@ export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId }) {
     svg.call(zoom);
 
     const simulationNodes = nodes.map((node) => ({ ...node }));
-    const simulationLinks = edges.map((edge) => ({ ...edge }));
+    const nodeById = new Map(simulationNodes.map((node) => [node.id, node]));
+    const simulationLinks = edges.map((edge) => ({
+      ...edge,
+      source: typeof edge.source === "string" ? (nodeById.get(edge.source) || edge.source) : edge.source,
+      target: typeof edge.target === "string" ? (nodeById.get(edge.target) || edge.target) : edge.target
+    }));
+    const simulation =
+      layoutMode === "force"
+        ? d3
+            .forceSimulation(simulationNodes)
+            .force(
+              "link",
+              d3
+                .forceLink(simulationLinks)
+                .id((item) => item.id)
+                .distance(110)
+                .strength(0.25)
+            )
+            .force("charge", d3.forceManyBody().strength(-260))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(38))
+        : null;
 
-    const simulation = d3
-      .forceSimulation(simulationNodes)
-      .force(
-        "link",
-        d3
-          .forceLink(simulationLinks)
-          .id((item) => item.id)
-          .distance(110)
-          .strength(0.25)
-      )
-      .force("charge", d3.forceManyBody().strength(-260))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(38));
+    if (layoutMode === "layered") {
+      applyLayeredLayout(simulationNodes, width, height);
+    } else if (layoutMode === "radial") {
+      applyRadialLayout(simulationNodes, width, height);
+    }
 
     const link = root
       .append("g")
@@ -59,7 +74,7 @@ export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId }) {
       .data(simulationNodes)
       .join("g")
       .style("cursor", "pointer")
-      .call(drag(simulation));
+      .call(simulation ? drag(simulation) : (selection) => selection);
 
     node
       .append("circle")
@@ -88,7 +103,7 @@ export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId }) {
       }
     });
 
-    simulation.on("tick", () => {
+    const renderFrame = () => {
       link
         .attr("x1", (item) => item.source.x)
         .attr("y1", (item) => item.source.y)
@@ -96,12 +111,18 @@ export function GraphCanvas({ nodes, edges, onSelect, selectedNodeId }) {
         .attr("y2", (item) => item.target.y);
 
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
-    });
+    };
+
+    if (simulation) {
+      simulation.on("tick", renderFrame);
+    } else {
+      renderFrame();
+    }
 
     return () => {
-      simulation.stop();
+      simulation?.stop();
     };
-  }, [edges, nodes, onSelect, selectedNodeId]);
+  }, [edges, layoutMode, nodes, onSelect, selectedNodeId]);
 
   return <svg aria-label="Architecture graph" className="graph-canvas" ref={svgRef} role="img" />;
 }
@@ -129,4 +150,62 @@ function drag(simulation) {
   }
 
   return d3.drag().on("start", dragStarted).on("drag", dragged).on("end", dragEnded);
+}
+
+function applyLayeredLayout(nodes, width, height) {
+  const grouped = groupNodesByLayer(nodes);
+  const orderedLayers = sortLayers([...grouped.keys()]);
+  const horizontalPadding = 110;
+  const verticalPadding = 110;
+  const usableWidth = Math.max(width - horizontalPadding * 2, 1);
+  const columnGap = orderedLayers.length > 1 ? usableWidth / (orderedLayers.length - 1) : 0;
+
+  orderedLayers.forEach((layer, layerIndex) => {
+    const layerNodes = grouped.get(layer) || [];
+    const usableHeight = Math.max(height - verticalPadding * 2, 1);
+    const rowGap = layerNodes.length > 1 ? usableHeight / (layerNodes.length - 1) : 0;
+    layerNodes.forEach((node, nodeIndex) => {
+      node.x = horizontalPadding + columnGap * layerIndex;
+      node.y =
+        layerNodes.length === 1
+          ? height / 2
+          : verticalPadding + rowGap * nodeIndex;
+    });
+  });
+}
+
+function applyRadialLayout(nodes, width, height) {
+  const grouped = groupNodesByLayer(nodes);
+  const orderedLayers = sortLayers([...grouped.keys()]);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const baseRadius = Math.min(width, height) * 0.16;
+  const ringGap = Math.min(width, height) * 0.1;
+
+  orderedLayers.forEach((layer, layerIndex) => {
+    const layerNodes = grouped.get(layer) || [];
+    const radius = baseRadius + ringGap * layerIndex;
+    layerNodes.forEach((node, nodeIndex) => {
+      const angle = (Math.PI * 2 * nodeIndex) / Math.max(layerNodes.length, 1);
+      node.x = centerX + Math.cos(angle) * radius;
+      node.y = centerY + Math.sin(angle) * radius;
+    });
+  });
+}
+
+function groupNodesByLayer(nodes) {
+  const grouped = new Map();
+  [...nodes]
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .forEach((node) => {
+      const existing = grouped.get(node.layer) || [];
+      existing.push(node);
+      grouped.set(node.layer, existing);
+    });
+  return grouped;
+}
+
+function sortLayers(layers) {
+  const custom = layers.filter((layer) => !preferredLayerOrder.includes(layer)).sort();
+  return [...preferredLayerOrder.filter((layer) => layers.includes(layer)), ...custom];
 }

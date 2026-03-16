@@ -28,6 +28,7 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 - Analyze GitHub repositories from both CLI and Web UI
 - Detect a broad set of source and scripting languages across the repository
 - Perform dependency analysis for Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby
+- Perform deeper dependency analysis for Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, Groovy, C#, PHP, Swift, C/C++, Objective-C, Ruby, Dart, Lua, Perl, and Shell
 - Parse dependencies and build graphs with `networkx`
 - Infer top-level architecture layers:
   `Frontend`, `Backend`, `Database`, `Infrastructure`, `Shared`
@@ -35,8 +36,10 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 - Render Mermaid as both source and live diagram in the web UI
 - Render an interactive graph in the browser with D3.js
 - Support graph search and filtering by layer and language in the web UI
-- Resolve JavaScript/TypeScript monorepo workspaces and `tsconfig` / `jsconfig` path aliases
+- Support graph layout switching in the web UI with force, layered, and radial views
+- Resolve JavaScript/TypeScript monorepo workspaces from `package.json`, `pnpm-workspace.yaml`, `lerna.json`, and `tsconfig` / `jsconfig` path aliases
 - Cache repository analysis results on disk to speed up repeated requests
+- Run large-repository analysis through async job endpoints with progress polling
 - Proxy frontend requests through Next.js to avoid common local `Failed to fetch` issues
 - Support `allowedDevOrigins` for LAN-based Next.js development
 - Provide production-ready deployment files for Vercel and Docker
@@ -48,7 +51,7 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 - Repository-wide language detection:
   Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, Groovy, C, C++, C#, Swift, Objective-C, PHP, Ruby, Perl, Lua, R, Julia, Dart, Shell, PowerShell, Batch, Tcl, Elixir, Erlang, Haskell, OCaml, F#, Nim, Zig, Crystal, Elm, Clojure, Common Lisp, Scheme, Racket, Fortran, COBOL, Ada, Pascal, Visual Basic, D, Solidity, Move, V, Verilog, VHDL, Assembly, SQL, GraphQL, CSS, HTML, XML, Vue, Svelte, Astro, Nix, Starlark, Terraform, HCL, Bicep, Jsonnet, Cue, Rego, Puppet, Raku, Apex, Haxe, ReasonML, Standard ML, Awk, AppleScript, Dockerfile, Makefile, and CMake.
 - Deep dependency analysis:
-  Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby.
+  Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, Groovy, C#, PHP, Swift, C/C++, Objective-C, Ruby, Dart, Lua, Perl, and Shell.
 - Generic module inventory for all other detected languages:
   files are still included in the architecture map, tree, graph, and language summary even when deep import resolution is not available.
 
@@ -181,6 +184,13 @@ REPOMAP_API_URL=http://127.0.0.1:8000
 ALLOWED_DEV_ORIGINS=localhost,127.0.0.1,192.168.164.1
 ```
 
+Async API example:
+
+```text
+POST /api/analyze/jobs
+GET  /api/analyze/jobs/{job_id}
+```
+
 ## Example Output
 
 Folder tree:
@@ -295,17 +305,17 @@ docker compose up --build
 Implemented now:
 
 - broad language detection across source and script files
-- deep dependency analysis for major languages including Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby
-- stronger JavaScript/TypeScript monorepo resolution for workspaces and `tsconfig` aliases
-- web graph search and filtering
+- deep dependency analysis for Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, Groovy, C#, PHP, Swift, C/C++, Objective-C, Ruby, Dart, Lua, Perl, and Shell
+- stronger JavaScript/TypeScript monorepo resolution for `package.json`, `pnpm-workspace.yaml`, `lerna.json`, and `tsconfig` aliases
+- web graph search, filtering, and layout switching
 - on-disk analysis caching for repeated repository scans
+- async analysis jobs with progress polling for large repositories
 
 Still good next upgrades:
 
-- background jobs and progress APIs for very large repositories
 - persistent queue workers for production deployments
-- deeper package-manager-aware monorepo resolution for pnpm, Turbo, Nx, Cargo workspaces, Maven multi-module, Gradle multi-project, and Bazel
-- graph grouping, collapsing, saved views, and layout presets
+- deeper package-manager-aware monorepo resolution for Turbo, Nx, Cargo workspaces, Maven multi-module, Gradle multi-project, and Bazel
+- graph grouping, collapsing, saved views, edge bundling, and layout presets
 - incremental re-analysis instead of full rescans
 
 ## Contributing
@@ -314,7 +324,7 @@ Contributions are welcome. Good next steps include:
 
 - more language-specific parsers
 - package-manager-aware monorepo resolution
-- background jobs and async execution for large repositories
+- persistent queue workers and async execution for large repositories
 - graph grouping, layout presets, and collaboration features
 
 ---

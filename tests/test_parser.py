@@ -254,6 +254,80 @@ def test_build_module_inventory_resolves_workspace_packages_and_tsconfig_paths(t
     assert len(dependency_map["apps/web/src/main.ts"]) == 2
 
 
+def test_build_module_inventory_resolves_pnpm_and_lerna_workspaces(tmp_path: Path) -> None:
+    (tmp_path / "pnpm-workspace.yaml").write_text(
+        """
+        packages:
+          - packages/*
+          - apps/*
+        """,
+        encoding="utf-8",
+    )
+    (tmp_path / "lerna.json").write_text(
+        """
+        {
+          "packages": ["packages/*"]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    package_root = tmp_path / "packages" / "shared"
+    package_root.mkdir(parents=True)
+    (package_root / "package.json").write_text(
+        """
+        {
+          "name": "@repo/shared",
+          "main": "src/index.ts"
+        }
+        """,
+        encoding="utf-8",
+    )
+    (package_root / "src").mkdir()
+    (package_root / "src" / "index.ts").write_text("export const shared = true;\n", encoding="utf-8")
+
+    app_root = tmp_path / "apps" / "web" / "src"
+    app_root.mkdir(parents=True)
+    (app_root / "main.ts").write_text('import { shared } from "@repo/shared";\n', encoding="utf-8")
+
+    modules, _languages, _primary_language = build_module_inventory(tmp_path)
+    dependency_map = {module.path: module.internal_dependencies for module in modules}
+
+    assert dependency_map["apps/web/src/main.ts"]
+
+
+def test_build_module_inventory_resolves_dart_lua_perl_and_shell_dependencies(tmp_path: Path) -> None:
+    (tmp_path / "pubspec.yaml").write_text("name: sample_app\n", encoding="utf-8")
+
+    dart_lib = tmp_path / "lib"
+    dart_lib.mkdir()
+    (dart_lib / "util.dart").write_text("const util = 1;\n", encoding="utf-8")
+    (dart_lib / "main.dart").write_text("import 'package:sample_app/util.dart';\n", encoding="utf-8")
+
+    lua_root = tmp_path / "lua"
+    lua_root.mkdir()
+    (lua_root / "util.lua").write_text("return {}\n", encoding="utf-8")
+    (lua_root / "main.lua").write_text('local util = require("lua.util")\n', encoding="utf-8")
+
+    perl_root = tmp_path / "lib" / "Sample"
+    perl_root.mkdir(parents=True, exist_ok=True)
+    (perl_root / "Util.pm").write_text("package Sample::Util;\n1;\n", encoding="utf-8")
+    (perl_root / "App.pm").write_text("use Sample::Util;\n1;\n", encoding="utf-8")
+
+    shell_root = tmp_path / "scripts"
+    shell_root.mkdir()
+    (shell_root / "common.sh").write_text("echo common\n", encoding="utf-8")
+    (shell_root / "deploy.sh").write_text('source "./common.sh"\n', encoding="utf-8")
+
+    modules, _languages, _primary_language = build_module_inventory(tmp_path)
+    dependency_map = {module.path: module.internal_dependencies for module in modules}
+
+    assert dependency_map["lib/main.dart"]
+    assert dependency_map["lua/main.lua"]
+    assert dependency_map["lib/Sample/App.pm"]
+    assert dependency_map["scripts/deploy.sh"]
+
+
 def test_layer_detection_uses_path_and_dependencies() -> None:
     module = ModuleInfo(
         id="javascript:web/components/button",
