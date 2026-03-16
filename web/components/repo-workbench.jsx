@@ -41,6 +41,9 @@ const copy = {
     mermaidFallback: "Mermaid 渲染失败，下面保留源码。",
     mermaidOverview: "整体架构",
     mermaidDiagram: "图表",
+    mermaidSourceShow: "展开源码",
+    mermaidSourceHide: "收起源码",
+    mermaidSourceEmpty: "当前图表没有可显示的 Mermaid 源码。",
     treeTitle: "Tree",
     languageZh: "中文",
     languageEn: "EN",
@@ -92,6 +95,9 @@ const copy = {
     mermaidFallback: "Mermaid rendering failed. The source is still available below.",
     mermaidOverview: "Overview",
     mermaidDiagram: "Diagram",
+    mermaidSourceShow: "Show source",
+    mermaidSourceHide: "Hide source",
+    mermaidSourceEmpty: "No Mermaid source is available for the current diagram.",
     treeTitle: "Tree",
     languageZh: "中文",
     languageEn: "EN",
@@ -124,6 +130,7 @@ export function RepoWorkbench() {
   const [layoutMode, setLayoutMode] = useState("force");
   const [jobStatus, setJobStatus] = useState(null);
   const [selectedMermaidKey, setSelectedMermaidKey] = useState("overview");
+  const [isMermaidSourceOpen, setIsMermaidSourceOpen] = useState(false);
   const [error, setError] = useState("");
   const [branchError, setBranchError] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -135,7 +142,10 @@ export function RepoWorkbench() {
   const edges = architecture?.graph?.edges ?? [];
   const layers = architecture?.architecture_layers ?? [];
   const modules = architecture?.modules ?? [];
-  const mermaidDiagrams = result?.mermaid_diagrams ?? [{ key: "overview", title: t.mermaidOverview, chart: result?.mermaid ?? "" }];
+  const mermaidDiagrams =
+    result?.mermaid_diagrams && result.mermaid_diagrams.length
+      ? result.mermaid_diagrams
+      : [{ key: "overview", title: t.mermaidOverview, chart: result?.mermaid ?? "" }];
   const activeMermaid =
     mermaidDiagrams.find((diagram) => diagram.key === selectedMermaidKey) ??
     mermaidDiagrams[0] ??
@@ -183,6 +193,7 @@ export function RepoWorkbench() {
 
   useEffect(() => {
     setSelectedMermaidKey("overview");
+    setIsMermaidSourceOpen(false);
   }, [result]);
 
   useEffect(() => {
@@ -480,10 +491,22 @@ export function RepoWorkbench() {
                 <div className="mermaid-stack-preview">
                   <MermaidPreview chart={activeMermaid.chart} fallbackLabel={t.mermaidFallback} />
                 </div>
-                <details className="mermaid-source" open>
-                  <summary>{t.mermaidCodeTitle}</summary>
-                  <pre className="code-block">{activeMermaid.chart}</pre>
-                </details>
+                <div className="mermaid-source">
+                  <button
+                    type="button"
+                    className="mermaid-source-toggle"
+                    onClick={() => setIsMermaidSourceOpen((current) => !current)}
+                  >
+                    {isMermaidSourceOpen ? t.mermaidSourceHide : t.mermaidSourceShow}
+                  </button>
+                  {isMermaidSourceOpen ? (
+                    activeMermaid.chart ? (
+                      <pre className="code-block">{activeMermaid.chart}</pre>
+                    ) : (
+                      <div className="mermaid-source-empty">{t.mermaidSourceEmpty}</div>
+                    )
+                  ) : null}
+                </div>
               </div>
             </section>
           </aside>

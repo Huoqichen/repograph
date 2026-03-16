@@ -343,17 +343,27 @@ select {
   min-width: 0;
 }
 
-.mermaid-source summary {
+.mermaid-source-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
-  list-style: none;
+  text-align: left;
   padding: 14px 16px;
   font-family: var(--font-mono), monospace;
   font-size: 0.8rem;
-  color: var(--muted);
 }
 
-.mermaid-source summary::-webkit-details-marker {
-  display: none;
+.mermaid-source-toggle:hover {
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.mermaid-source-empty {
+  padding: 0 16px 16px;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
 }
 
 .module-card {
