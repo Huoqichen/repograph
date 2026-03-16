@@ -12,3 +12,5 @@ out/
 .turbo/
 .env
 .env.local
+.codex-temp-cache/
+/repomap-cache/

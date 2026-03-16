@@ -12,23 +12,35 @@ def clone_repository(repo_url: str, clone_root: Path | None = None, branch: str 
     if temporary_clone:
         temp_root = _default_clone_root()
         temp_root.mkdir(parents=True, exist_ok=True)
-        base_dir = Path(tempfile.mkdtemp(prefix="repograph-", dir=str(temp_root)))
+        base_dir = Path(tempfile.mkdtemp(prefix="rp-", dir=str(temp_root)))
     else:
         base_dir = clone_root.expanduser().resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
 
     repo_name = _repo_name_from_url(repo_url)
-    destination = base_dir / repo_name
+    destination = base_dir / (_temporary_destination_name(repo_name) if temporary_clone else repo_name)
     if destination.exists():
         raise FileExistsError(f"Destination already exists: {destination}")
 
-    command = ["git", "clone", "--depth", "1"]
+    command = ["git", "-c", "core.longpaths=true", "clone", "--depth", "1", "--no-checkout"]
     if branch:
         command.extend(["--branch", branch])
     command.extend([repo_url, str(destination)])
 
     try:
         subprocess.run(command, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "-C", str(destination), "config", "core.longpaths", "true"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(destination), "checkout", "-f", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     except subprocess.CalledProcessError as error:
         stderr = error.stderr.strip() or error.stdout.strip() or str(error)
         raise RuntimeError(f"git clone failed: {stderr}") from error
@@ -83,9 +95,18 @@ def github_blob_url(repo_url: str, branch: str | None, relative_path: str) -> st
 
 
 def _default_clone_root() -> Path:
-    return Path(__file__).resolve().parents[1] / ".codex-temp-cache" / "clones"
+    workspace_root = Path(__file__).resolve().parents[1]
+    drive_root = Path(workspace_root.anchor)
+    if drive_root.exists():
+        return drive_root / "repomap-cache" / "c"
+    return workspace_root / ".codex-temp-cache" / "clones"
 
 
 def _repo_name_from_url(repo_url: str) -> str:
     name = repo_url.rstrip("/").rsplit("/", 1)[-1]
     return name[:-4] if name.endswith(".git") else name
+
+
+def _temporary_destination_name(repo_name: str) -> str:
+    suffix = "".join(character for character in repo_name.lower() if character.isalnum())[:6]
+    return f"r{suffix or 'repo'}"
