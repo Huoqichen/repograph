@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { GraphCanvas } from "./graph-canvas";
+import { MermaidPreview } from "./mermaid-preview";
 import { fetchArchitecture, fetchBranches } from "../lib/api";
 
 const copy = {
@@ -27,6 +28,8 @@ const copy = {
     none: "无",
     listTitle: "Modules",
     mermaidTitle: "Mermaid",
+    mermaidCodeTitle: "源码",
+    mermaidFallback: "Mermaid 渲染失败，下面保留源码。",
     treeTitle: "Tree",
     languageZh: "中文",
     languageEn: "EN",
@@ -57,6 +60,8 @@ const copy = {
     none: "None",
     listTitle: "Modules",
     mermaidTitle: "Mermaid",
+    mermaidCodeTitle: "Source",
+    mermaidFallback: "Mermaid rendering failed. The source is still available below.",
     treeTitle: "Tree",
     languageZh: "中文",
     languageEn: "EN",
@@ -307,7 +312,13 @@ export function RepoWorkbench() {
 
             <section className="panel side-section">
               <h3>{t.mermaidTitle}</h3>
-              <pre className="code-block">{result.mermaid}</pre>
+              <div className="mermaid-stack">
+                <MermaidPreview chart={result.mermaid} fallbackLabel={t.mermaidFallback} />
+                <details className="mermaid-source">
+                  <summary>{t.mermaidCodeTitle}</summary>
+                  <pre className="code-block">{result.mermaid}</pre>
+                </details>
+              </div>
             </section>
           </aside>
         </section>

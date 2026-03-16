@@ -1,2 +1,10 @@
 INFO:     127.0.0.1:56679 - "GET /health HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61085 - "GET /api/branches?repo_url=https://github.com/Huoqichen/repograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65042 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65042 - "POST /api/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62047 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52656 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59676 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59169 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54317 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61928 - "GET /api/branches?repo_url=https%3A%2F%2Fgithub.com%2FHuoqichen%2Frepograph HTTP/1.1" 200 OK

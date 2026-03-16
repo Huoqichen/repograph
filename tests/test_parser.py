@@ -123,6 +123,84 @@ def test_build_module_inventory_includes_generic_languages_and_typescript(tmp_pa
     assert primary_language in {"Python", "TypeScript", "Rust"}
 
 
+def test_build_module_inventory_resolves_java_and_ruby_dependencies(tmp_path: Path) -> None:
+    java_service = tmp_path / "src" / "main" / "java" / "com" / "example" / "core" / "Service.java"
+    java_service.parent.mkdir(parents=True)
+    java_service.write_text(
+        "\n".join(
+            [
+                "package com.example.core;",
+                "public class Service {}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    java_api = tmp_path / "src" / "main" / "java" / "com" / "example" / "api" / "Controller.java"
+    java_api.parent.mkdir(parents=True, exist_ok=True)
+    java_api.write_text(
+        "\n".join(
+            [
+                "package com.example.api;",
+                "import com.example.core.Service;",
+                "public class Controller {}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    ruby_service = tmp_path / "lib" / "service.rb"
+    ruby_service.parent.mkdir(parents=True, exist_ok=True)
+    ruby_service.write_text("class Service; end\n", encoding="utf-8")
+
+    ruby_app = tmp_path / "lib" / "app.rb"
+    ruby_app.write_text('require_relative "./service"\n', encoding="utf-8")
+
+    modules, _languages, _primary_language = build_module_inventory(tmp_path)
+    dependencies = {module.name: module.internal_dependencies for module in modules}
+
+    assert any(name.endswith("com.example.api.Controller") for name in dependencies)
+    java_dependency_ids = next(value for name, value in dependencies.items() if name.endswith("com.example.api.Controller"))
+    ruby_dependency_ids = dependencies["lib/app"]
+
+    assert java_dependency_ids
+    assert ruby_dependency_ids
+
+
+def test_build_module_inventory_resolves_rust_and_c_family_dependencies(tmp_path: Path) -> None:
+    cargo_toml = tmp_path / "Cargo.toml"
+    cargo_toml.write_text(
+        "\n".join(
+            [
+                "[package]",
+                'name = "sample-crate"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rust_lib = tmp_path / "src" / "lib.rs"
+    rust_lib.parent.mkdir(parents=True, exist_ok=True)
+    rust_lib.write_text("mod api;\n", encoding="utf-8")
+
+    rust_api = tmp_path / "src" / "api.rs"
+    rust_api.write_text("pub fn run() {}\n", encoding="utf-8")
+
+    header = tmp_path / "include" / "util.h"
+    header.parent.mkdir(parents=True, exist_ok=True)
+    header.write_text("#pragma once\n", encoding="utf-8")
+
+    source = tmp_path / "src" / "main.cpp"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text('#include "../include/util.h"\n', encoding="utf-8")
+
+    modules, _languages, _primary_language = build_module_inventory(tmp_path)
+    dependency_map = {module.path: module.internal_dependencies for module in modules}
+
+    assert dependency_map["src/lib.rs"]
+    assert dependency_map["src/main.cpp"]
+
+
 def test_layer_detection_uses_path_and_dependencies() -> None:
     module = ModuleInfo(
         id="javascript:web/components/button",

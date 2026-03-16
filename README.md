@@ -27,11 +27,12 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 
 - Analyze GitHub repositories from both CLI and Web UI
 - Detect a broad set of source and scripting languages across the repository
-- Perform dependency analysis for Python, JavaScript, TypeScript, and Go
+- Perform dependency analysis for Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby
 - Parse dependencies and build graphs with `networkx`
 - Infer top-level architecture layers:
   `Frontend`, `Backend`, `Database`, `Infrastructure`, `Shared`
 - Export folder tree, JSON, and Mermaid output
+- Render Mermaid as both source and live diagram in the web UI
 - Render an interactive graph in the browser with D3.js
 - Proxy frontend requests through Next.js to avoid common local `Failed to fetch` issues
 - Support `allowedDevOrigins` for LAN-based Next.js development
@@ -44,7 +45,7 @@ It is designed for developers who want to understand an unfamiliar codebase quic
 - Repository-wide language detection:
   Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, Scala, Groovy, C, C++, C#, Swift, Objective-C, PHP, Ruby, Perl, Lua, R, Julia, Dart, Shell, PowerShell, Batch, Tcl, Elixir, Erlang, Haskell, OCaml, F#, Nim, Zig, Crystal, Elm, Clojure, Common Lisp, Scheme, Racket, Fortran, COBOL, Ada, Pascal, Visual Basic, D, Solidity, Move, V, Verilog, VHDL, Assembly, SQL, GraphQL, CSS, HTML, XML, Vue, Svelte, Astro, Nix, Starlark, Terraform, HCL, Bicep, Jsonnet, Cue, Rego, Puppet, Raku, Apex, Haxe, ReasonML, Standard ML, Awk, AppleScript, Dockerfile, Makefile, and CMake.
 - Deep dependency analysis:
-  Python, JavaScript, TypeScript, and Go.
+  Python, JavaScript, TypeScript, Go, Rust, Java, Kotlin, C#, PHP, Swift, C/C++, Objective-C, and Ruby.
 - Generic module inventory for all other detected languages:
   files are still included in the architecture map, tree, graph, and language summary even when deep import resolution is not available.
 
@@ -305,11 +306,11 @@ Contributions are welcome. Good next steps include:
 ## Star History
 
 <p align="center">
-<a href="https://www.star-history.com/?repos=Huoqichen%2Frepograph&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=Huoqichen%2Frepomap&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repomap&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repomap&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Huoqichen/repomap&type=date&legend=top-left" />
  </picture>
 </a>
 </p>

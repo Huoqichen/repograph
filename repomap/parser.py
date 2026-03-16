@@ -35,7 +35,7 @@ LANGUAGE_EXTENSIONS = {
     "Scala": {".scala", ".sc"},
     "Groovy": {".groovy", ".gradle"},
     "C": {".c"},
-    "C++": {".cc", ".cpp", ".cxx", ".c++", ".hh", ".hpp", ".hxx", ".ipp", ".inl"},
+    "C++": {".cc", ".cpp", ".cxx", ".c++", ".hh", ".hpp", ".hxx", ".ipp", ".inl", ".h"},
     "C#": {".cs", ".csx"},
     "Swift": {".swift"},
     "Objective-C": {".m", ".mm"},
@@ -151,8 +151,25 @@ SHEBANG_LANGUAGE_HINTS = {
     "groovy": "Groovy",
 }
 
-DEPENDENCY_ANALYSIS_LANGUAGES = {"Python", "JavaScript", "TypeScript", "Go"}
+DEEP_ANALYSIS_LANGUAGES = {
+    "Python",
+    "JavaScript",
+    "TypeScript",
+    "Go",
+    "Rust",
+    "Java",
+    "Kotlin",
+    "C#",
+    "PHP",
+    "Swift",
+    "C",
+    "C++",
+    "Objective-C",
+    "Ruby",
+}
 JS_TS_LANGUAGES = {"JavaScript", "TypeScript"}
+JVM_LANGUAGES = {"Java", "Kotlin"}
+C_FAMILY_LANGUAGES = {"C", "C++", "Objective-C"}
 JS_TS_EXTENSIONS = tuple(
     sorted(
         LANGUAGE_EXTENSIONS["JavaScript"] | LANGUAGE_EXTENSIONS["TypeScript"],
@@ -176,6 +193,22 @@ GO_MODULE_RE = re.compile(r"^\s*module\s+(\S+)\s*$", re.MULTILINE)
 GO_SINGLE_IMPORT_RE = re.compile(r'^\s*import\s+"([^"]+)"\s*$', re.MULTILINE)
 GO_IMPORT_BLOCK_RE = re.compile(r"import\s*\((.*?)\)", re.DOTALL)
 GO_IMPORT_LINE_RE = re.compile(r'^\s*(?:[\w.]+\s+)?"([^"]+)"\s*$', re.MULTILINE)
+JAVA_PACKAGE_RE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.MULTILINE)
+JAVA_IMPORT_RE = re.compile(r"^\s*import\s+(?:static\s+)?([\w.*]+)\s*;", re.MULTILINE)
+KOTLIN_PACKAGE_RE = re.compile(r"^\s*package\s+([\w.]+)", re.MULTILINE)
+KOTLIN_IMPORT_RE = re.compile(r"^\s*import\s+([\w.*]+)", re.MULTILINE)
+C_SHARP_NAMESPACE_RE = re.compile(r"^\s*(?:file\s+)?namespace\s+([\w.]+)", re.MULTILINE)
+C_SHARP_USING_RE = re.compile(r"^\s*(?:global\s+)?using\s+(?:static\s+)?([\w.]+)\s*;", re.MULTILINE)
+PHP_NAMESPACE_RE = re.compile(r"^\s*namespace\s+([^;]+);", re.MULTILINE)
+PHP_USE_RE = re.compile(r"^\s*use\s+([^;]+);", re.MULTILINE)
+PHP_FILE_IMPORT_RE = re.compile(r"""(?:require|require_once|include|include_once)\s*(?:\(\s*)?["']([^"']+)["']""")
+RUBY_REQUIRE_RE = re.compile(r"""^\s*require\s+["']([^"']+)["']""", re.MULTILINE)
+RUBY_REQUIRE_RELATIVE_RE = re.compile(r"""^\s*require_relative\s+["']([^"']+)["']""", re.MULTILINE)
+RUST_USE_RE = re.compile(r"^\s*use\s+(.+?);", re.MULTILINE)
+RUST_MOD_RE = re.compile(r"^\s*(?:pub\s+)?mod\s+([A-Za-z_]\w*)\s*;", re.MULTILINE)
+RUST_CRATE_NAME_RE = re.compile(r'^\s*name\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
+SWIFT_IMPORT_RE = re.compile(r"^\s*import\s+([A-Za-z_]\w*)", re.MULTILINE)
+C_INCLUDE_RE = re.compile(r'^\s*#\s*(?:include|import)\s*([<"])([^">]+)[">]', re.MULTILINE)
 NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -215,15 +248,45 @@ def build_module_inventory(root: Path) -> tuple[list[ModuleInfo], list[LanguageS
         extension_counter[language].add(_display_extension(file_path))
 
     modules: list[ModuleInfo] = []
+    analyzed_files: set[Path] = set()
+
     python_files = [path for path, language in language_by_path.items() if language == "Python"]
     js_ts_files = [path for path, language in language_by_path.items() if language in JS_TS_LANGUAGES]
     go_files = [path for path, language in language_by_path.items() if language == "Go"]
-    analyzed_files = set(python_files) | set(js_ts_files) | set(go_files)
-    generic_files = [path for path in source_files if path not in analyzed_files]
+    rust_files = [path for path, language in language_by_path.items() if language == "Rust"]
+    java_files = [path for path, language in language_by_path.items() if language == "Java"]
+    kotlin_files = [path for path, language in language_by_path.items() if language == "Kotlin"]
+    csharp_files = [path for path, language in language_by_path.items() if language == "C#"]
+    php_files = [path for path, language in language_by_path.items() if language == "PHP"]
+    ruby_files = [path for path, language in language_by_path.items() if language == "Ruby"]
+    swift_files = [path for path, language in language_by_path.items() if language == "Swift"]
+    c_family_files = [path for path, language in language_by_path.items() if language in C_FAMILY_LANGUAGES]
 
     modules.extend(_analyze_python_modules(root, python_files))
     modules.extend(_analyze_javascript_modules(root, js_ts_files, language_by_path))
     modules.extend(_analyze_go_packages(root, go_files))
+    modules.extend(_analyze_rust_modules(root, rust_files))
+    modules.extend(_analyze_jvm_modules(root, java_files, "Java"))
+    modules.extend(_analyze_jvm_modules(root, kotlin_files, "Kotlin"))
+    modules.extend(_analyze_csharp_modules(root, csharp_files))
+    modules.extend(_analyze_php_modules(root, php_files))
+    modules.extend(_analyze_ruby_modules(root, ruby_files))
+    modules.extend(_analyze_swift_modules(root, swift_files))
+    modules.extend(_analyze_c_family_modules(root, c_family_files, language_by_path))
+
+    analyzed_files.update(python_files)
+    analyzed_files.update(js_ts_files)
+    analyzed_files.update(go_files)
+    analyzed_files.update(rust_files)
+    analyzed_files.update(java_files)
+    analyzed_files.update(kotlin_files)
+    analyzed_files.update(csharp_files)
+    analyzed_files.update(php_files)
+    analyzed_files.update(ruby_files)
+    analyzed_files.update(swift_files)
+    analyzed_files.update(c_family_files)
+
+    generic_files = [path for path in source_files if path not in analyzed_files]
     modules.extend(_build_generic_modules(root, generic_files, language_by_path))
 
     languages = [
@@ -428,6 +491,304 @@ def _analyze_go_packages(root: Path, go_files: list[Path]) -> list[ModuleInfo]:
     return modules
 
 
+def _analyze_rust_modules(root: Path, rust_files: list[Path]) -> list[ModuleInfo]:
+    crate_name = _read_rust_crate_name(root) or root.name.replace("-", "_")
+    module_name_by_file = {file_path: _rust_module_name(root, file_path, crate_name) for file_path in rust_files}
+    id_by_name = {
+        module_name: f"rust:{file_path.relative_to(root).with_suffix('').as_posix()}"
+        for file_path, module_name in module_name_by_file.items()
+    }
+    modules: list[ModuleInfo] = []
+
+    for file_path in sorted(rust_files):
+        module_name = module_name_by_file[file_path]
+        module_id = id_by_name[module_name]
+        raw_imports = sorted(_parse_rust_imports(file_path))
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in raw_imports:
+            resolved = _resolve_rust_internal_import(import_name, module_name, crate_name, id_by_name)
+            if resolved:
+                internal_dependencies.update(dep for dep in resolved if dep != module_id)
+            else:
+                normalized = _normalize_rust_dependency(import_name, crate_name)
+                if normalized:
+                    external_dependencies.add(normalized)
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language="Rust",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_jvm_modules(root: Path, files: list[Path], language_name: str) -> list[ModuleInfo]:
+    if not files:
+        return []
+
+    metadata: dict[Path, tuple[str, list[str]]] = {}
+    name_to_id: dict[str, str] = {}
+    for file_path in sorted(files):
+        package_name, imports = _parse_jvm_metadata(file_path, language_name)
+        module_name = _jvm_module_name(root, file_path, package_name)
+        metadata[file_path] = (module_name, imports)
+        name_to_id[module_name] = f"{_language_slug(language_name)}:{file_path.relative_to(root).with_suffix('').as_posix()}"
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_name, imports = metadata[file_path]
+        module_id = name_to_id[module_name]
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+        for import_name in sorted(set(imports)):
+            resolved = _resolve_dotted_internal_import(import_name, name_to_id)
+            if resolved:
+                internal_dependencies.update(dep for dep in resolved if dep != module_id)
+            else:
+                external_dependencies.add(_normalize_dotted_dependency(import_name))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language=language_name,
+                imports=sorted(set(imports)),
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_csharp_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    metadata: dict[Path, tuple[str, list[str]]] = {}
+    name_to_id: dict[str, str] = {}
+
+    for file_path in sorted(files):
+        namespace_name, imports = _parse_csharp_metadata(file_path)
+        module_name = _namespaced_file_name(root, file_path, namespace_name)
+        metadata[file_path] = (module_name, imports)
+        name_to_id[module_name] = f"c-sharp:{file_path.relative_to(root).with_suffix('').as_posix()}"
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_name, imports = metadata[file_path]
+        module_id = name_to_id[module_name]
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+        for import_name in sorted(set(imports)):
+            resolved = _resolve_dotted_internal_import(import_name, name_to_id)
+            if resolved:
+                internal_dependencies.update(dep for dep in resolved if dep != module_id)
+            else:
+                external_dependencies.add(_normalize_dotted_dependency(import_name))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language="C#",
+                imports=sorted(set(imports)),
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_php_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    metadata: dict[Path, tuple[str, list[str], list[str]]] = {}
+    name_to_id: dict[str, str] = {}
+    path_alias_index: dict[str, str] = {}
+
+    for file_path in sorted(files):
+        namespace_name, namespace_imports, file_imports = _parse_php_metadata(file_path)
+        module_name = _namespaced_file_name(root, file_path, namespace_name, separator="\\")
+        metadata[file_path] = (module_name, namespace_imports, file_imports)
+        module_id = f"php:{file_path.relative_to(root).with_suffix('').as_posix()}"
+        name_to_id[module_name] = module_id
+        path_alias_index[file_path.relative_to(root).with_suffix('').as_posix()] = module_id
+        path_alias_index[file_path.relative_to(root).as_posix()] = module_id
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_name, namespace_imports, file_imports = metadata[file_path]
+        module_id = name_to_id[module_name]
+        raw_imports = sorted(set(namespace_imports + file_imports))
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in namespace_imports:
+            resolved = _resolve_php_namespace_import(import_name, name_to_id)
+            if resolved:
+                internal_dependencies.update(dep for dep in resolved if dep != module_id)
+            else:
+                external_dependencies.add(_normalize_php_dependency(import_name))
+
+        for import_name in file_imports:
+            resolved = _resolve_path_like_import(root, file_path, import_name, path_alias_index, (".php",))
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(import_name)
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=module_name,
+                path=file_path.relative_to(root).as_posix(),
+                language="PHP",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_ruby_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    alias_index: dict[str, str] = {}
+    metadata: dict[Path, tuple[list[str], list[str]]] = {}
+
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = f"ruby:{relative_stem}"
+        alias_index[relative_stem] = module_id
+        alias_index[file_path.relative_to(root).as_posix()] = module_id
+        alias_index[file_path.name] = module_id
+        alias_index[file_path.stem] = module_id
+        metadata[file_path] = _parse_ruby_imports(file_path)
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = alias_index[relative_stem]
+        require_imports, require_relative_imports = metadata[file_path]
+        raw_imports = sorted(set(require_imports + require_relative_imports))
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+
+        for import_name in require_relative_imports:
+            resolved = _resolve_path_like_import(root, file_path, import_name, alias_index, (".rb",))
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(import_name)
+
+        for import_name in require_imports:
+            resolved = alias_index.get(import_name) or alias_index.get(import_name.removesuffix(".rb"))
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            else:
+                external_dependencies.add(_normalize_path_dependency(import_name))
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=relative_stem,
+                path=file_path.relative_to(root).as_posix(),
+                language="Ruby",
+                imports=raw_imports,
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
+def _analyze_swift_modules(root: Path, files: list[Path]) -> list[ModuleInfo]:
+    target_to_files: dict[str, list[Path]] = defaultdict(list)
+    for file_path in files:
+        target_to_files[_swift_target_name(root, file_path)].append(file_path)
+
+    modules: list[ModuleInfo] = []
+    target_to_id = {target_name: f"swift:{target_name}" for target_name in target_to_files}
+    for target_name, target_files in sorted(target_to_files.items()):
+        imports: set[str] = set()
+        for file_path in target_files:
+            imports.update(_parse_swift_imports(file_path))
+
+        internal_dependencies = sorted(
+            target_to_id[import_name]
+            for import_name in imports
+            if import_name in target_to_id and target_to_id[import_name] != target_to_id[target_name]
+        )
+        external_dependencies = sorted(import_name for import_name in imports if import_name not in target_to_id)
+
+        modules.append(
+            ModuleInfo(
+                id=target_to_id[target_name],
+                name=target_name,
+                path=_swift_target_path(root, target_files[0]),
+                language="Swift",
+                imports=sorted(imports),
+                internal_dependencies=internal_dependencies,
+                external_dependencies=external_dependencies,
+            )
+        )
+
+    return modules
+
+
+def _analyze_c_family_modules(
+    root: Path,
+    files: list[Path],
+    language_by_path: dict[Path, str | None],
+) -> list[ModuleInfo]:
+    alias_index: dict[str, str] = {}
+    path_to_id: dict[Path, str] = {}
+    for file_path in sorted(files):
+        relative_stem = file_path.relative_to(root).with_suffix("").as_posix()
+        module_id = f"{_language_slug(language_by_path[file_path] or 'c-family')}:{relative_stem}"
+        path_to_id[file_path.resolve()] = module_id
+        alias_index[file_path.relative_to(root).as_posix()] = module_id
+        alias_index[relative_stem] = module_id
+        alias_index[file_path.name] = module_id
+        alias_index[file_path.stem] = module_id
+
+    modules: list[ModuleInfo] = []
+    for file_path in sorted(files):
+        module_id = path_to_id[file_path.resolve()]
+        imports = _parse_c_family_imports(file_path)
+        internal_dependencies: set[str] = set()
+        external_dependencies: set[str] = set()
+        for import_name, is_local in imports:
+            resolved = _resolve_c_family_import(root, file_path, import_name, alias_index)
+            if resolved and resolved != module_id:
+                internal_dependencies.add(resolved)
+            elif not resolved:
+                external_dependencies.add(_normalize_path_dependency(import_name) if is_local else import_name.split("/", 1)[0])
+
+        modules.append(
+            ModuleInfo(
+                id=module_id,
+                name=file_path.relative_to(root).with_suffix("").as_posix(),
+                path=file_path.relative_to(root).as_posix(),
+                language=language_by_path[file_path] or "C++",
+                imports=[import_name for import_name, _is_local in imports],
+                internal_dependencies=sorted(internal_dependencies),
+                external_dependencies=sorted(external_dependencies),
+            )
+        )
+
+    return modules
+
+
 def _build_generic_modules(
     root: Path,
     source_files: list[Path],
@@ -596,6 +957,295 @@ def _normalize_go_dependency(import_name: str) -> str:
         return import_name
     parts = import_name.split("/")
     return "/".join(parts[:3]) if "." in parts[0] else parts[0]
+
+
+def _read_rust_crate_name(root: Path) -> str | None:
+    cargo_toml = root / "Cargo.toml"
+    if not cargo_toml.exists():
+        return None
+
+    match = RUST_CRATE_NAME_RE.search(cargo_toml.read_text(encoding="utf-8", errors="ignore"))
+    return match.group(1).replace("-", "_") if match else None
+
+
+def _rust_module_name(root: Path, file_path: Path, crate_name: str) -> str:
+    relative = file_path.relative_to(root)
+    if relative.parts and relative.parts[0] == "src":
+        inner = Path(*relative.parts[1:]) if len(relative.parts) > 1 else Path(relative.name)
+        if inner.name in {"lib.rs", "main.rs"}:
+            return crate_name
+        if inner.name == "mod.rs":
+            inner = inner.parent
+        else:
+            inner = inner.with_suffix("")
+        dotted = ".".join(inner.parts)
+        return f"{crate_name}.{dotted}" if dotted else crate_name
+
+    dotted = relative.with_suffix("").as_posix().replace("/", ".")
+    return f"{crate_name}.{dotted}" if dotted else crate_name
+
+
+def _parse_rust_imports(file_path: Path) -> set[str]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    imports = {_normalize_rust_use(raw_import) for raw_import in RUST_USE_RE.findall(source)}
+    imports.update(f"self::{mod_name}" for mod_name in RUST_MOD_RE.findall(source))
+    return {import_name for import_name in imports if import_name}
+
+
+def _normalize_rust_use(raw_import: str) -> str:
+    normalized = raw_import.split(" as ", 1)[0].strip()
+    if "{" in normalized:
+        normalized = normalized.split("{", 1)[0].rstrip(":")
+    return normalized.strip()
+
+
+def _resolve_rust_internal_import(
+    import_name: str,
+    current_module: str,
+    crate_name: str,
+    name_to_id: dict[str, str],
+) -> list[str]:
+    candidates = _rust_import_candidates(import_name, current_module, crate_name)
+    resolved: list[str] = []
+    for candidate in candidates:
+        if candidate in name_to_id:
+            resolved.append(name_to_id[candidate])
+            continue
+        for dotted_name, module_id in name_to_id.items():
+            if dotted_name.startswith(f"{candidate}."):
+                resolved.append(module_id)
+    return sorted(set(resolved))
+
+
+def _rust_import_candidates(import_name: str, current_module: str, crate_name: str) -> list[str]:
+    if not import_name:
+        return []
+
+    parts = import_name.split("::")
+    if parts[0] == "crate":
+        return [crate_name + (f".{'.'.join(parts[1:])}" if len(parts) > 1 else "")]
+    if parts[0] == "self":
+        return [current_module + (f".{'.'.join(parts[1:])}" if len(parts) > 1 else "")]
+    if parts[0] == "super":
+        base = _package_for_module(current_module)
+        parent = _package_for_module(base) if base else ""
+        suffix = ".".join(parts[1:])
+        return [part for part in [f"{parent}.{suffix}".strip("."), suffix] if part]
+
+    dotted = import_name.replace("::", ".")
+    if dotted == crate_name or dotted.startswith(f"{crate_name}."):
+        return [dotted]
+    return [f"{crate_name}.{dotted}".strip("."), dotted]
+
+
+def _normalize_rust_dependency(import_name: str, crate_name: str) -> str | None:
+    parts = [part for part in import_name.split("::") if part]
+    if not parts:
+        return None
+    if parts[0] in {"crate", "self", "super"}:
+        return None
+    if parts[0] == crate_name:
+        return None
+    return parts[0]
+
+
+def _parse_jvm_metadata(file_path: Path, language_name: str) -> tuple[str | None, list[str]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    if language_name == "Java":
+        package_match = JAVA_PACKAGE_RE.search(source)
+        package_name = package_match.group(1) if package_match else None
+        imports = JAVA_IMPORT_RE.findall(source)
+    else:
+        package_match = KOTLIN_PACKAGE_RE.search(source)
+        package_name = package_match.group(1) if package_match else None
+        imports = KOTLIN_IMPORT_RE.findall(source)
+    return package_name, sorted(set(imports))
+
+
+def _jvm_module_name(root: Path, file_path: Path, package_name: str | None) -> str:
+    stem = file_path.stem
+    if package_name:
+        return f"{package_name}.{stem}"
+    return file_path.relative_to(root).with_suffix("").as_posix().replace("/", ".")
+
+
+def _parse_csharp_metadata(file_path: Path) -> tuple[str | None, list[str]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    namespace_match = C_SHARP_NAMESPACE_RE.search(source)
+    namespace_name = namespace_match.group(1) if namespace_match else None
+    return namespace_name, sorted(set(C_SHARP_USING_RE.findall(source)))
+
+
+def _namespaced_file_name(
+    root: Path,
+    file_path: Path,
+    namespace_name: str | None,
+    separator: str = ".",
+) -> str:
+    if namespace_name:
+        return f"{namespace_name}{separator}{file_path.stem}"
+    return file_path.relative_to(root).with_suffix("").as_posix().replace("/", separator)
+
+
+def _resolve_dotted_internal_import(import_name: str, name_to_id: dict[str, str]) -> list[str]:
+    if not import_name:
+        return []
+
+    normalized = import_name.removesuffix(".*")
+    if normalized in name_to_id:
+        return [name_to_id[normalized]]
+
+    if import_name.endswith(".*"):
+        return sorted(
+            module_id for dotted_name, module_id in name_to_id.items() if dotted_name.startswith(f"{normalized}.")
+        )
+
+    parts = normalized.split(".")
+    for index in range(len(parts) - 1, 0, -1):
+        prefix = ".".join(parts[:index])
+        matches = [module_id for dotted_name, module_id in name_to_id.items() if dotted_name.startswith(f"{prefix}.")]
+        if matches:
+            return sorted(matches)
+    return []
+
+
+def _normalize_dotted_dependency(import_name: str) -> str:
+    normalized = import_name.removesuffix(".*").replace("\\", ".")
+    parts = [part for part in normalized.split(".") if part]
+    if not parts:
+        return import_name
+    if len(parts) >= 2 and parts[0] in {"com", "org", "io", "dev", "net", "javax", "android", "androidx"}:
+        return ".".join(parts[:2])
+    return ".".join(parts[:2]) if len(parts) >= 2 and parts[0].islower() else parts[0]
+
+
+def _parse_php_metadata(file_path: Path) -> tuple[str | None, list[str], list[str]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    namespace_match = PHP_NAMESPACE_RE.search(source)
+    namespace_name = namespace_match.group(1).strip().lstrip("\\") if namespace_match else None
+
+    namespace_imports: list[str] = []
+    for raw_import in PHP_USE_RE.findall(source):
+        for chunk in raw_import.split(","):
+            cleaned = chunk.strip()
+            if not cleaned:
+                continue
+            cleaned = cleaned.split(" as ", 1)[0].strip().lstrip("\\")
+            namespace_imports.append(cleaned)
+
+    file_imports = PHP_FILE_IMPORT_RE.findall(source)
+    return namespace_name, sorted(set(namespace_imports)), sorted(set(file_imports))
+
+
+def _resolve_php_namespace_import(import_name: str, name_to_id: dict[str, str]) -> list[str]:
+    normalized = import_name.lstrip("\\")
+    if normalized in name_to_id:
+        return [name_to_id[normalized]]
+    return sorted(
+        module_id for dotted_name, module_id in name_to_id.items() if dotted_name.startswith(f"{normalized}\\")
+    )
+
+
+def _normalize_php_dependency(import_name: str) -> str:
+    return import_name.lstrip("\\").split("\\", 1)[0]
+
+
+def _parse_ruby_imports(file_path: Path) -> tuple[list[str], list[str]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return (
+        sorted(set(RUBY_REQUIRE_RE.findall(source))),
+        sorted(set(RUBY_REQUIRE_RELATIVE_RE.findall(source))),
+    )
+
+
+def _swift_target_name(root: Path, file_path: Path) -> str:
+    relative = file_path.relative_to(root)
+    if len(relative.parts) >= 2 and relative.parts[0] in {"Sources", "Tests"}:
+        return relative.parts[1].removesuffix("Tests")
+    return relative.parts[0] if relative.parts else file_path.stem
+
+
+def _swift_target_path(root: Path, file_path: Path) -> str:
+    relative = file_path.relative_to(root)
+    if len(relative.parts) >= 2 and relative.parts[0] in {"Sources", "Tests"}:
+        return "/".join(relative.parts[:2])
+    return relative.parent.as_posix() or "."
+
+
+def _parse_swift_imports(file_path: Path) -> set[str]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return set(SWIFT_IMPORT_RE.findall(source))
+
+
+def _parse_c_family_imports(file_path: Path) -> list[tuple[str, bool]]:
+    source = file_path.read_text(encoding="utf-8", errors="ignore")
+    return [(import_name, delimiter == '"') for delimiter, import_name in C_INCLUDE_RE.findall(source)]
+
+
+def _resolve_c_family_import(
+    root: Path,
+    file_path: Path,
+    import_name: str,
+    alias_index: dict[str, str],
+) -> str | None:
+    if "/" in import_name or "\\" in import_name:
+        resolved = _resolve_path_like_import(root, file_path, import_name, alias_index, ("",))
+        if resolved:
+            return resolved
+
+    normalized = import_name.replace("\\", "/")
+    candidates = [normalized, normalized.rsplit("/", 1)[-1], Path(normalized).stem]
+    for candidate in candidates:
+        if candidate in alias_index:
+            return alias_index[candidate]
+    return None
+
+
+def _resolve_path_like_import(
+    root: Path,
+    file_path: Path,
+    import_name: str,
+    alias_index: dict[str, str],
+    default_extensions: tuple[str, ...],
+) -> str | None:
+    normalized_import = import_name.replace("\\", "/")
+    candidates: list[Path] = []
+
+    if normalized_import.startswith("."):
+        candidates.append((file_path.parent / normalized_import).resolve())
+    else:
+        candidates.append((root / normalized_import).resolve())
+        candidates.append((file_path.parent / normalized_import).resolve())
+
+    expanded: list[Path] = []
+    for candidate in candidates:
+        expanded.append(candidate)
+        if candidate.suffix:
+            expanded.append(candidate.with_suffix(""))
+        base_without_suffix = candidate if not candidate.suffix else candidate.with_suffix("")
+        for extension in default_extensions:
+            if extension:
+                expanded.append(base_without_suffix.with_suffix(extension))
+            else:
+                expanded.append(base_without_suffix)
+
+    seen: set[str] = set()
+    for candidate in expanded:
+        key = candidate.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.exists() and candidate.is_file():
+            relative_with_suffix = candidate.relative_to(root).as_posix()
+            relative_without_suffix = candidate.relative_to(root).with_suffix("").as_posix()
+            return alias_index.get(relative_with_suffix) or alias_index.get(relative_without_suffix)
+
+    normalized = normalized_import.removesuffix(".php").removesuffix(".rb")
+    return alias_index.get(normalized_import) or alias_index.get(normalized)
+
+
+def _normalize_path_dependency(import_name: str) -> str:
+    return import_name.replace("\\", "/").split("/", 1)[0]
 
 
 def _detect_language_from_shebang(path: Path) -> str | None:

@@ -248,6 +248,55 @@ select {
   margin-top: 14px;
 }
 
+.mermaid-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.mermaid-preview,
+.mermaid-fallback {
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.85);
+  min-height: 220px;
+  padding: 18px;
+}
+
+.mermaid-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mermaid-fallback {
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.mermaid-source {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+
+.mermaid-source summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 16px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mermaid-source summary::-webkit-details-marker {
+  display: none;
+}
+
 .module-card {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -313,7 +362,7 @@ select {
 }
 
 .code-block {
-  margin-top: 14px;
+  margin: 0;
   border-radius: 18px;
   background: #131416;
   color: #f5f7f8;

@@ -27,11 +27,12 @@
 
 - 同时支持命令行和 Web 界面分析 GitHub 仓库
 - 支持在整个仓库范围内识别大量源码与脚本语言
-- 对 Python、JavaScript、TypeScript、Go 进行深度依赖分析
+- 对 Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby 进行深度依赖分析
 - 使用 `networkx` 构建依赖关系图
 - 自动推断顶层架构层：
   `Frontend`、`Backend`、`Database`、`Infrastructure`、`Shared`
 - 输出目录树、JSON 和 Mermaid
+- Web 界面中的 Mermaid 支持可视化渲染与源码同时查看
 - 使用 D3.js 在浏览器中渲染交互式架构图
 - 通过 Next.js 同源代理减少本地开发时常见的 `Failed to fetch`
 - 支持 `allowedDevOrigins`，解决局域网访问 Next.js 开发服务时的警告
@@ -44,7 +45,7 @@
 - 仓库级语言识别：
   Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、Scala、Groovy、C、C++、C#、Swift、Objective-C、PHP、Ruby、Perl、Lua、R、Julia、Dart、Shell、PowerShell、Batch、Tcl、Elixir、Erlang、Haskell、OCaml、F#、Nim、Zig、Crystal、Elm、Clojure、Common Lisp、Scheme、Racket、Fortran、COBOL、Ada、Pascal、Visual Basic、D、Solidity、Move、V、Verilog、VHDL、Assembly、SQL、GraphQL、CSS、HTML、XML、Vue、Svelte、Astro、Nix、Starlark、Terraform、HCL、Bicep、Jsonnet、Cue、Rego、Puppet、Raku、Apex、Haxe、ReasonML、Standard ML、Awk、AppleScript、Dockerfile、Makefile、CMake。
 - 深度依赖分析：
-  Python、JavaScript、TypeScript、Go。
+  Python、JavaScript、TypeScript、Go、Rust、Java、Kotlin、C#、PHP、Swift、C/C++、Objective-C、Ruby。
 - 其它已识别语言：
   即使没有深度 import 解析，也会进入语言统计、模块清单、架构图和目录树结果。
 
