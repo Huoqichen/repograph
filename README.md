@@ -290,8 +290,6 @@ Contributions are welcome. Good next steps include:
 
 ## Star History
 
-## Star History
-
 <p align="center">
 <a href="https://www.star-history.com/?repos=Huoqichen%2Frepograph&type=date&legend=top-left">
  <picture>
