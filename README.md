@@ -293,9 +293,12 @@ Contributions are welcome. Good next steps include:
 <p align="center">
   <a href="https://www.star-history.com/?repos=Huoqichen%2Frepograph&type=date&legend=top-left">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&theme=dark&legend=top-left" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&legend=top-left" />
-      <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Huoqichen/repograph&type=date&legend=top-left" />
+       -->
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date&theme=dark&legend=top-left" />
+      <!-- 浅色模式 + 显示头像 -->
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date&legend=top-left" />
+      <!-- 默认图 + 显示头像 -->
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Huoqichen/repograph&type=Date&legend=top-left" />
     </picture>
   </a>
 </p>
